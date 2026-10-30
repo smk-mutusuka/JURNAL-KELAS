@@ -10,6 +10,7 @@
 </head>
 <body class="bg-light">
   <div id="app">
+    
     <!-- LOADING -->
     <div id="view-loading" class="view active">
       <div class="d-flex justify-content-center align-items-center vh-100">
@@ -48,6 +49,7 @@
 
     <!-- DASHBOARD WRAPPER -->
     <div id="view-dashboard" class="view">
+      
       <!-- SIDEBAR -->
       <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu" style="width: 280px;">
         <div class="offcanvas-header bg-primary text-white">
@@ -69,8 +71,9 @@
   </div>
 
   <!-- ================= KUMPULAN TEMPLATE HTML ================= -->
+  
+  <!-- TEMPLATE DASHBOARD -->
   <div id="tpl-dashboard" style="display: none;">
-    <!-- Isi dari Dashboard.html Anda ditaruh di sini (biarkan persis seperti aslinya) -->
     <div class="container pt-2">
       <div class="row mb-4">
         <div class="col-12">
@@ -110,8 +113,8 @@
     </div>
   </div>
 
+  <!-- TEMPLATE FORM JURNAL -->
   <div id="tpl-form-jurnal" style="display: none;">
-    <!-- Isi dari JournalForm.html Anda ditaruh di sini (biarkan persis seperti aslinya) -->
     <div class="container py-4">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-bold m-0">Formulir Jurnal Harian</h4>
@@ -189,15 +192,111 @@
     </div>
   </div>
 
+  <!-- TEMPLATE RIWAYAT -->
   <div id="tpl-riwayat" style="display: none;">
-     <!-- Isi dari JournalHistory.html Anda ditaruh di sini -->
-     <div class="container py-4"><div class="card shadow-sm border-0 p-4 text-center text-muted"><p>Fitur tabel riwayat akan diimplementasikan pada tahap selanjutnya.</p></div></div>
+    <div class="container py-4">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold m-0">Riwayat Jurnal Saya</h4>
+        <button class="btn btn-outline-secondary btn-sm" onclick="navigateTo('dashboard')">Kembali</button>
+      </div>
+      <div class="card shadow-sm border-0 p-4 text-center text-muted">
+        <p>Fitur tabel riwayat akan diimplementasikan pada tahap selanjutnya.</p>
+        <p class="small">Data jurnal Anda sudah tersimpan aman di database.</p>
+      </div>
+    </div>
   </div>
 
-  <!-- TAMBAHKAN tpl-admin dan tpl-laporan Anda di sini (Sama seperti kode Anda) -->
-  <!-- ... (Copy paste kode tpl-admin & tpl-laporan Anda) ... -->
-  <div id="tpl-admin" style="display: none;">...</div>
-  <div id="tpl-laporan" style="display: none;">...</div>
+  <!-- TEMPLATE ADMIN -->
+  <div id="tpl-admin" style="display: none;">
+    <div class="container py-4">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold m-0">⚙️ Manajemen Data Master</h4>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="navigateTo('dashboard')">Kembali</button>
+      </div>
+      
+      <ul class="nav nav-tabs mb-3" id="adminTabs" role="tablist">
+        <li class="nav-item" role="presentation"><button type="button" class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tab-guru">Data Guru</button></li>
+        <li class="nav-item" role="presentation"><button type="button" class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-kelas">Data Kelas</button></li>
+        <li class="nav-item" role="presentation"><button type="button" class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-mapel">Data Mapel</button></li>
+      </ul>
+      <div class="tab-content card shadow-sm border-0 p-3" id="adminTabsContent">
+        <div class="tab-pane fade show active" id="tab-guru">
+          <div class="table-responsive"><table class="table table-hover align-middle">
+            <thead class="table-light"><tr><th>Nama Guru</th><th>Email</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="tbody-guru"></tbody>
+          </table></div>
+        </div>
+        <div class="tab-pane fade" id="tab-kelas">
+          <div class="table-responsive"><table class="table table-hover align-middle">
+            <thead class="table-light"><tr><th>Nama Kelas</th><th>Tingkat</th><th>Konsentrasi</th><th>Jml Siswa</th><th>Aksi</th></tr></thead>
+            <tbody id="tbody-kelas"></tbody>
+          </table></div>
+        </div>
+        <div class="tab-pane fade" id="tab-mapel">
+          <div class="table-responsive"><table class="table table-hover align-middle">
+            <thead class="table-light"><tr><th>Nama Mata Pelajaran</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="tbody-mapel"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEMPLATE LAPORAN -->
+  <div id="tpl-laporan" style="display: none;">
+    <div class="container py-4">
+      <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+        <h4 class="fw-bold m-0">📊 Laporan Jurnal</h4>
+        <div>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="navigateTo('dashboard')">Kembali</button>
+          <button type="button" class="btn btn-success fw-bold btn-sm" onclick="window.print()">🖨️ Cetak Laporan</button>
+        </div>
+      </div>
+      
+      <div class="card shadow-sm border-0 mb-4 d-print-none">
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3"><label class="form-label">Dari Tanggal</label><input type="date" class="form-control" id="repTglMulai"></div>
+            <div class="col-md-3"><label class="form-label">Sampai Tanggal</label><input type="date" class="form-control" id="repTglSelesai"></div>
+            <div class="col-md-3"><label class="form-label">Kelas</label><select class="form-select" id="repKelas"><option value="">Semua Kelas</option></select></div>
+            <div class="col-md-3"><button type="button" class="btn btn-primary w-100 fw-bold" onclick="loadReports()">Tampilkan Data</button></div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="print-area" class="bg-white p-4 shadow-sm border-0">
+        <div class="text-center mb-4">
+          <h3 class="fw-bold m-0">SMK MUHAMMADIYAH 1 SURAKARTA</h3>
+          <p class="m-0">Laporan Jurnal Harian Guru</p><hr>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm text-sm" style="font-size: 12px;">
+            <thead class="table-light text-center">
+              <tr>
+                <th style="width: 30px;">No</th>
+                <th style="width: 80px;">Tanggal</th>
+                <th style="width: 70px;">Kelas</th>
+                <th style="width: 80px;">Jam</th>
+                <th>Mapel</th>
+                <th>Guru Pengisi</th>
+                <th>Topik</th>
+                <th style="width: 40px;">Hadir</th>
+                <th style="width: 25px;">S</th>
+                <th style="width: 25px;">I</th>
+                <th style="width: 25px;">A</th>
+                <th>Keterangan (Siswa Tidak Hadir)</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-reports"><tr><td colspan="12" class="text-center text-muted">Belum ada data.</td></tr></tbody>
+          </table>
+        </div>
+        <div class="mt-5 d-flex justify-content-between">
+          <div>Mengetahui,<br>Kepala Sekolah<br><br><br><br><u>Joko Harinto, S.Pd., M.Pd.</u></div>
+          <div>Surakarta, <span id="tglCetak"></span><br>Petugas Kurikulum<br><br><br><br><u>........................................</u></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="app.js"></script>
