@@ -298,12 +298,13 @@
     }).catch(err => alert("Error Admin: " + err.message));
   }
 
-  // --- REPORTS ---
+    // --- REPORTS ---
   function initReports() {
     if (!$('repTglMulai')) return;
 
     let today = new Date();
     let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    // Format YYYY-MM-DD
     $('repTglMulai').value = firstDay.toISOString().split('T')[0];
     $('repTglSelesai').value = today.toISOString().split('T')[0];
     
@@ -311,17 +312,26 @@
       $('tglCetak').textContent = today.toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'});
     }
 
+    // Tampilkan loading di dropdown
+    let sel = $('repKelas'); 
+    if(sel) sel.innerHTML = '<option value="">Memuat kelas...</option>';
+
     callApi('api_getFormMasterData', state.token).then(data => {
-      let sel = $('repKelas'); 
       if(!sel) return;
       sel.innerHTML = '<option value="">Semua Kelas</option>';
       
       if (data && data.classes && data.classes.length > 0) {
-        data.classes.forEach(c => { sel.innerHTML += `<option value="${c.class_id}">${c.nama_kelas}</option>`; });
+        data.classes.forEach(c => { 
+          sel.innerHTML += `<option value="${c.class_id}">${c.nama_kelas}</option>`; 
+        });
       } else {
-        sel.innerHTML = '<option value="">(Data Kelas Kosong)</option>';
+        sel.innerHTML = '<option value="">(Data Kelas Kosong di Database)</option>';
       }
-    }).catch(err => console.error("Error Load Filter Kelas:", err));
+    }).catch(err => {
+      console.error("Error Load Filter Kelas:", err);
+      if(sel) sel.innerHTML = '<option value="">Gagal memuat kelas (Sesi Habis)</option>';
+      alert("Sesi Anda mungkin telah berakhir. Silakan Logout lalu Login kembali untuk memuat data kelas.");
+    });
   }
 
   window.loadReports = function() {
