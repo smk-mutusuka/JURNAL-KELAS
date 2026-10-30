@@ -1,0 +1,16 @@
+.view { display: none; }
+.view.active { display: block; }
+.hover-card { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
+.hover-card:hover { transform: translateY(-5px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
+#main-content { min-height: calc(100vh - 56px); }
+
+@media print {
+  body { background: white !important; }
+  .d-print-none, .offcanvas, .navbar { display: none !important; }
+  #main-content { margin: 0 !important; padding: 0 !important; }
+  .container { max-width: 100% !important; width: 100% !important; margin: 0 !important; }
+  #print-area { box-shadow: none !important; border: none !important; padding: 0 !important; }
+  table { width: 100% !important; border-collapse: collapse !important; }
+  th, td { border: 1px solid #000 !important; padding: 4px !important; }
+  @page { size: A4 landscape; margin: 1cm; }
+}
