@@ -1,9 +1,11 @@
 (function () {
   'use strict';
   
-  // GANTI URL DI BAWAH INI DENGAN URL WEB APP GAS ANDA
+  // =========================================================
+  // ⚠️ GANTI URL DI BAWAH INI DENGAN URL WEB APP GAS ANDA ⚠️
   const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyR93WUooPuW468-Rto5AMne17uvXw5XjzECPB5J1_4xrOjHTAVMr5AfFLSExnEX3F8/exec'; 
-  
+  // =========================================================
+
   var TOKEN_KEY = 'jhg_token';
   var $ = function (id) { return document.getElementById(id); };
   
@@ -12,10 +14,11 @@
   
   var state = { token: null, user: null, config: {}, masterData: null, targetKelas: urlKelas };
 
+  // --- FUNGSI FETCH API (Dengan Timeout) ---
   async function callApi(action, token, data = {}) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 detik batas waktu
       
       const response = await fetch(GAS_API_URL, {
         method: 'POST',
@@ -27,6 +30,7 @@
       clearTimeout(timeoutId);
       const result = await response.json();
       
+      // Jika sesi habis
       if (result.ok === false && (result.error.includes('Sesi tidak valid') || result.error.includes('AUTH_REQUIRED'))) {
         localStorage.removeItem(TOKEN_KEY);
         state.token = null; state.user = null;
@@ -131,6 +135,7 @@
     }
   }
 
+  // --- LOGIN SUBMIT ---
   document.addEventListener('submit', function (e) {
     if (e.target && e.target.id === 'form-login') {
       e.preventDefault();
@@ -153,12 +158,21 @@
     }
   });
 
+  // --- FORM JURNAL ---
   function initFormJurnal() {
     var today = new Date(); 
     if($('jTanggal')) $('jTanggal').value = today.toISOString().split('T')[0];
     
+    // TAMBAHAN: Otomatis isi nama guru yang sedang login
+    if($('jNamaPengisi')) $('jNamaPengisi').value = state.user.nama_guru;
+    
     var isPiket = state.user.roles.indexOf('piket') !== -1 || state.user.roles.indexOf('admin') !== -1;
-    if (isPiket && $('optPengganti')) { $('optPengganti').style.display = 'block'; }
+    if (isPiket && $('optPengganti')) { 
+      $('optPengganti').style.display = 'block'; 
+    } else {
+      if ($('optPengganti')) $('optPengganti').style.display = 'none';
+      if ($('jStatusGuru')) $('jStatusGuru').value = 'utama';
+    }
 
     if (!state.targetKelas) {
       alert("⚠️ Anda tidak membuka aplikasi dari QR Code kelas.\n\nSilakan scan QR Code di pintu kelas untuk mengisi jurnal.");
@@ -247,6 +261,7 @@
     }
   });
 
+  // --- ADMIN PANEL ---
   function initAdminPanel() {
     let tbGuru = $('tbody-guru'); 
     if (!tbGuru) return;
@@ -299,6 +314,7 @@
     }).catch(err => alert("Error Admin: " + err.message));
   }
 
+  // --- REPORTS ---
   function initReports() {
     if (!$('repTglMulai')) return;
 
@@ -371,6 +387,7 @@
     }).catch(err => alert("Error Laporan: " + err.message));
   }
 
+  // --- BOOT (INISIALISASI) ---
   function boot() {
     state.token = localStorage.getItem(TOKEN_KEY);
     
@@ -395,28 +412,3 @@
 
   document.addEventListener('DOMContentLoaded', boot);
 })();
-
-  function initFormJurnal() {
-    var today = new Date(); 
-    if($('jTanggal')) $('jTanggal').value = today.toISOString().split('T')[0];
-    
-    // --- TAMBAHKAN BARIS INI ---
-    // Otomatis isi nama guru yang sedang login
-    if($('jNamaPengisi')) $('jNamaPengisi').value = state.user.nama_guru;
-    // ---------------------------
-
-    var isPiket = state.user.roles.indexOf('piket') !== -1 || state.user.roles.indexOf('admin') !== -1;
-    if (isPiket && $('optPengganti')) { 
-      $('optPengganti').style.display = 'block'; 
-    } else {
-      // Jika bukan piket, pastikan tidak bisa memilih pengganti
-      if ($('optPengganti')) $('optPengganti').style.display = 'none';
-      if ($('jStatusGuru')) $('jStatusGuru').value = 'utama';
-    }
-
-    if (!state.targetKelas) {
-      alert("⚠️ Anda tidak membuka aplikasi dari QR Code kelas.\n\nSilakan scan QR Code di pintu kelas untuk mengisi jurnal.");
-      navigateTo('dashboard');
-      return;
-    }
-    // ... sisa kode di bawahnya biarkan sama ...
