@@ -85,6 +85,7 @@
       }
     }
     if (page === 'form-jurnal') { setTimeout(initFormJurnal, 100); }
+    if (page === 'riwayat') { setTimeout(initRiwayat, 100); }
     if (page === 'admin') { setTimeout(initAdminPanel, 100); }
     if (page === 'laporan') { setTimeout(initReports, 100); }
   };
@@ -253,7 +254,37 @@
       });
     }).catch(err => alert("Error Laporan: " + err.message));
   }
+  // --- RIWAYAT JURNAL ---
+  function initRiwayat() {
+    let tb = $('tbody-riwayat');
+    if (!tb) return;
 
+    callApi('api_getMyJournals', state.token).then(res => {
+      tb.innerHTML = '';
+      if (!res.data || res.data.length === 0) {
+        tb.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Belum ada jurnal yang pernah Anda isi.</td></tr>';
+        return;
+      }
+
+      res.data.forEach(j => {
+        let statusBadge = j.status === 'pengganti' 
+          ? `<span class="badge bg-warning text-dark">Pengganti (dari ${j.guru_utama})</span>` 
+          : `<span class="badge bg-success">Guru Utama</span>`;
+          
+        tb.innerHTML += `<tr>
+          <td>${j.tanggal}</td>
+          <td class="fw-bold">${j.nama_kelas}</td>
+          <td>${j.jam}</td>
+          <td>${j.mapel}</td>
+          <td>${j.topik}</td>
+          <td class="text-center"><span class="text-success">${j.hadir}</span> / <span class="text-warning">${j.sakit}</span> / <span class="text-info">${j.izin}</span> / <span class="text-danger">${j.alpa}</span></td>
+          <td>${statusBadge}</td>
+        </tr>`;
+      });
+    }).catch(err => {
+      tb.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-3">Gagal memuat riwayat: ${err.message}</td></tr>`;
+    });
+  }
   function boot() {
     state.token = localStorage.getItem(TOKEN_KEY);
     if($('schoolName')) $('schoolName').textContent = 'SMK Muhammadiyah 1 Surakarta';
