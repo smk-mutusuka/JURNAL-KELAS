@@ -285,15 +285,45 @@
       tb.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-3">Gagal memuat riwayat: ${err.message}</td></tr>`;
     });
   }
+    // --- BOOT (INISIALISASI) ---
   function boot() {
-    state.token = localStorage.getItem(TOKEN_KEY);
+    var urlParams = new URLSearchParams(window.location.search);
+    var urlToken = urlParams.get('token'); // Cek apakah ada tiket dari GAS
+    
+    // Jika ada tiket, simpan ke localStorage
+    if (urlToken) {
+      localStorage.setItem(TOKEN_KEY, urlToken);
+      state.token = urlToken;
+      // Bersihkan parameter token dari URL agar rapi
+      window.history.replaceState({}, document.title, window.location.pathname + (state.targetKelas ? '?kelas=' + state.targetKelas : ''));
+    } else {
+      state.token = localStorage.getItem(TOKEN_KEY);
+    }
+    
     if($('schoolName')) $('schoolName').textContent = 'SMK Muhammadiyah 1 Surakarta';
-    if (!state.token) { show('view-login'); return; }
+    
+    // Jika tetap tidak ada token, tampilkan form login manual
+    if (!state.token) { 
+      show('view-login'); 
+      return; 
+    }
+    
+    // Jika ada token (dari QR atau dari localStorage), langsung Login
     callApi('api_getCurrentUser', state.token).then(function (data) { 
-      state.user = data.user; state.config = data.config || state.config; renderDashboard(data.user); 
+      state.user = data.user; 
+      state.config = data.config || state.config; 
+      renderDashboard(data.user); // Ini akan otomatis lari ke form jurnal
     }).catch(function (err) { 
-      localStorage.removeItem(TOKEN_KEY); state.token = null; show('view-login'); 
+      // Jika token palsu / expired
+      localStorage.removeItem(TOKEN_KEY); 
+      state.token = null; 
+      show('view-login'); 
+      if (state.targetKelas) {
+        let box = $('warning-box');
+        if (box) {
+          box.classList.remove('d-none');
+          $('warning-text').innerHTML = "Sesi Anda telah berakhir. Silakan login ulang.";
+        }
+      }
     });
   }
-  document.addEventListener('DOMContentLoaded', boot);
-})();
