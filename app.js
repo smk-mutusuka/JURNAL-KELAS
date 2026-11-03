@@ -1,59 +1,44 @@
 (function () {
   'use strict';
   
-  // =========================================================
-  // ⚠️ GANTI URL DI BAWAH INI DENGAN URL WEB APP GAS ANDA ⚠️
-  const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyR93WUooPuW468-Rto5AMne17uvXw5XjzECPB5J1_4xrOjHTAVMr5AfFLSExnEX3F8/exec'; 
-  // =========================================================
+  // GANTI DENGAN URL WEB APP GAS ANDA
+  const GAS_API_URL = 'https://script.google.com/macros/s/XXXXXX/exec'; 
 
   var TOKEN_KEY = 'jhg_token';
   var $ = function (id) { return document.getElementById(id); };
-  
   const urlParams = new URLSearchParams(window.location.search);
   var urlKelas = urlParams.get('kelas') || '';
-  
   var state = { token: null, user: null, config: {}, masterData: null, targetKelas: urlKelas };
 
-  // --- FUNGSI FETCH API (Dengan Timeout) ---
   async function callApi(action, token, data = {}) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 detik batas waktu
-      
+      const timeoutId = setTimeout(() => controller.abort(), 10000); 
       const response = await fetch(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: action, token: token, data: data }),
         signal: controller.signal
       });
-      
       clearTimeout(timeoutId);
       const result = await response.json();
       
-      // Jika sesi habis
       if (result.ok === false && (result.error.includes('Sesi tidak valid') || result.error.includes('AUTH_REQUIRED'))) {
         localStorage.removeItem(TOKEN_KEY);
         state.token = null; state.user = null;
         show('view-login');
         throw new Error('Sesi berakhir, silakan login ulang.'); 
       }
-
       if (result.ok === false) throw new Error(result.error || 'Gagal.');
       return result.data;
-      
     } catch (error) {
-      if (error.name === 'AbortError') {
-        throw new Error('Koneksi ke server Google terlalu lama (Timeout).');
-      }
+      if (error.name === 'AbortError') throw new Error('Koneksi ke server Google terlalu lama (Timeout).');
       throw new Error(error.message || 'Kesalahan jaringan.');
     }
   }
 
   window.navigateTo = function(page) {
-    var tplId = 'tpl-' + page;
-    var tpl = document.getElementById(tplId);
-    if (!tpl) tpl = document.getElementById('tpl-dashboard');
-    
+    var tpl = document.getElementById('tpl-' + page) || document.getElementById('tpl-dashboard');
     $('main-content').innerHTML = tpl.innerHTML;
     
     if (page === 'dashboard' && state.user) {
@@ -85,11 +70,9 @@
           if (t) callApi('api_logout', t).catch(function () {});
         };
       }
-
       var hasWali = state.user.roles.indexOf('wali_kelas') !== -1;
       var hasAdmin = state.user.roles.indexOf('admin') !== -1;
       var hasKuri = state.user.roles.indexOf('kurikulum') !== -1;
-      
       let btnSidebar = document.getElementById('btn-sidebar');
       if (hasWali || hasAdmin || hasKuri) {
         if (btnSidebar) btnSidebar.classList.remove('d-none');
@@ -101,7 +84,6 @@
         if ($('menu-admin')) $('menu-admin').classList.add('d-none');
       }
     }
-
     if (page === 'form-jurnal') { setTimeout(initFormJurnal, 100); }
     if (page === 'admin') { setTimeout(initAdminPanel, 100); }
     if (page === 'laporan') { setTimeout(initReports, 100); }
@@ -128,14 +110,9 @@
 
   function renderDashboard(user) {
     show('view-dashboard');
-    if (state.targetKelas) {
-      navigateTo('form-jurnal');
-    } else {
-      navigateTo('dashboard');
-    }
+    if (state.targetKelas) { navigateTo('form-jurnal'); } else { navigateTo('dashboard'); }
   }
 
-  // --- LOGIN SUBMIT ---
   document.addEventListener('submit', function (e) {
     if (e.target && e.target.id === 'form-login') {
       e.preventDefault();
@@ -144,13 +121,10 @@
       if (!emailGuru || !pin) return;
 
       $('btn-login').disabled = true; $('btn-login').textContent = 'Memproses...';
-      
       callApi('api_login', null, { emailGuru: emailGuru, pin: pin }).then(function (data) {
-        state.token = data.token; 
-        state.user = data.user;
+        state.token = data.token; state.user = data.user;
         localStorage.setItem(TOKEN_KEY, data.token);
-        $('pin').value = ''; 
-        renderDashboard(data.user);
+        $('pin').value = ''; renderDashboard(data.user);
       }).catch(function (err) { 
         $('login-message').innerHTML = '<span class="text-danger">'+err.message+'</span>'; 
         $('btn-login').disabled = false; $('btn-login').textContent = 'Masuk Aplikasi';
@@ -158,33 +132,26 @@
     }
   });
 
-  // --- FORM JURNAL ---
   function initFormJurnal() {
     var today = new Date(); 
     if($('jTanggal')) $('jTanggal').value = today.toISOString().split('T')[0];
-    
-    // TAMBAHAN: Otomatis isi nama guru yang sedang login
     if($('jNamaPengisi')) $('jNamaPengisi').value = state.user.nama_guru;
     
     var isPiket = state.user.roles.indexOf('piket') !== -1 || state.user.roles.indexOf('admin') !== -1;
-    if (isPiket && $('optPengganti')) { 
-      $('optPengganti').style.display = 'block'; 
-    } else {
+    if (isPiket && $('optPengganti')) { $('optPengganti').style.display = 'block'; } 
+    else {
       if ($('optPengganti')) $('optPengganti').style.display = 'none';
       if ($('jStatusGuru')) $('jStatusGuru').value = 'utama';
     }
 
     if (!state.targetKelas) {
       alert("⚠️ Anda tidak membuka aplikasi dari QR Code kelas.\n\nSilakan scan QR Code di pintu kelas untuk mengisi jurnal.");
-      navigateTo('dashboard');
-      return;
+      navigateTo('dashboard'); return;
     }
-
     if($('jMapel')) $('jMapel').innerHTML = '<option value="">Memuat data...</option>';
 
     callApi('api_getFormMasterData', state.token).then(function (data) {
       state.masterData = data;
-      
       let kelas = data.classes.find(c => String(c.class_id).trim() === String(state.targetKelas).trim());
       if (kelas) {
         if($('jNamaKelas')) $('jNamaKelas').value = kelas.nama_kelas;
@@ -194,28 +161,19 @@
       } else {
         if($('jNamaKelas')) $('jNamaKelas').value = "Kelas tidak ditemukan: " + state.targetKelas;
       }
-
       var selMapel = $('jMapel'); 
       if(selMapel){
         selMapel.innerHTML = '<option value="">-- Pilih Mapel --</option>';
         if (data.subjects && data.subjects.length > 0) {
-          data.subjects.forEach(s => { 
-            selMapel.innerHTML += `<option value="${s.subject_id}">${s.nama_mata_pelajaran}</option>`; 
-          });
+          data.subjects.forEach(s => { selMapel.innerHTML += `<option value="${s.subject_id}">${s.nama_mata_pelajaran}</option>`; });
         }
       }
-      
       var selGuru = $('jGuruUtama'); 
       if(selGuru){
         selGuru.innerHTML = '<option value="">-- Pilih Guru --</option>';
-        data.teachers.forEach(t => { 
-          if (t.user_id !== state.user.user_id) selGuru.innerHTML += `<option value="${t.user_id}">${t.nama_guru}</option>`; 
-        });
+        data.teachers.forEach(t => { if (t.user_id !== state.user.user_id) selGuru.innerHTML += `<option value="${t.user_id}">${t.nama_guru}</option>`; });
       }
-    }).catch(function (err) { 
-      console.error(err);
-      alert("Gagal memuat data dari server: " + err.message); 
-    });
+    }).catch(function (err) { alert("Gagal memuat data dari server: " + err.message); });
   }
 
   window.toggleGuruPengganti = function() {
@@ -235,9 +193,7 @@
   document.addEventListener('submit', function(e) {
     if (e.target && e.target.id === 'formJurnal') {
       e.preventDefault();
-      var btn = $('btnSimpan'); 
-      btn.disabled = true; btn.textContent = 'Menyimpan...';
-      
+      var btn = $('btnSimpan'); btn.disabled = true; btn.textContent = 'Menyimpan...';
       var payload = {
         tanggal: $('jTanggal').value, status_guru: $('jStatusGuru').value, guru_utama_id: $('jGuruUtama').value,
         class_id: $('jKelas').value, subject_id: $('jMapel').value, jam_mulai: $('jJamMulai').value,
@@ -245,170 +201,68 @@
         jumlah_sakit: $('jSakit').value, jumlah_izin: $('jIzin').value, jumlah_alpa: $('jAlpa').value,
         kejadian: $('jKejadian').value
       };
-      
       callApi('api_saveJournal', state.token, payload).then(function (res) {
         alert('✅ ' + res.message); 
-        if(state.targetKelas) {
-          initFormJurnal(); 
-          btn.disabled = false; btn.textContent = 'Simpan Jurnal';
-        } else {
-          navigateTo('dashboard');
-        }
+        if(state.targetKelas) { initFormJurnal(); btn.disabled = false; btn.textContent = 'Simpan Jurnal'; } 
+        else { navigateTo('dashboard'); }
       }).catch(function (err) {
-        alert('❌ ' + err.message); 
-        btn.disabled = false; btn.textContent = 'Simpan Jurnal';
+        alert('❌ ' + err.message); btn.disabled = false; btn.textContent = 'Simpan Jurnal';
       });
     }
   });
 
-  // --- ADMIN PANEL ---
   function initAdminPanel() {
     let tbGuru = $('tbody-guru'); 
     if (!tbGuru) return;
-
     callApi('api_getAdminData', state.token).then(data => {
-      tbGuru.innerHTML = '';
-      if (!data.users || data.users.length === 0) {
-        tbGuru.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Data Guru Kosong.</td></tr>';
-      } else {
-        data.users.forEach(u => {
-          let isAktif = String(u.status_aktif).toLowerCase() === 'true';
-          tbGuru.innerHTML += `<tr>
-            <td>${u.nama_guru}</td><td>${u.email}</td><td><span class="badge bg-secondary">${u.role}</span></td>
-            <td>${isAktif ? '<span class="text-success">Aktif</span>' : '<span class="text-danger">Nonaktif</span>'}</td>
-            <td><button type="button" class="btn btn-sm btn-primary" disabled>Edit</button></td>
-          </tr>`;
-        });
-      }
-      
+      tbGuru.innerHTML = data.users.map(u => `<tr><td>${u.nama_guru}</td><td>${u.email}</td><td><span class="badge bg-secondary">${u.role}</span></td><td>${String(u.status_aktif).toLowerCase() === 'true' ? '<span class="text-success">Aktif</span>' : '<span class="text-danger">Nonaktif</span>'}</td><td><button type="button" class="btn btn-sm btn-primary" disabled>Edit</button></td></tr>`).join('');
       let tbKelas = $('tbody-kelas'); 
-      if(tbKelas) {
-        tbKelas.innerHTML = '';
-        if (!data.classes || data.classes.length === 0) {
-          tbKelas.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Data Kelas Kosong.</td></tr>';
-        } else {
-          data.classes.forEach(c => {
-            tbKelas.innerHTML += `<tr>
-              <td>${c.nama_kelas}</td><td>${c.tingkat}</td><td>${c.konsentrasi_keahlian}</td><td>${c.jumlah_siswa}</td>
-              <td><button type="button" class="btn btn-sm btn-primary" disabled>Edit</button></td>
-            </tr>`;
-          });
-        }
-      }
-      
+      if(tbKelas) tbKelas.innerHTML = data.classes.map(c => `<tr><td>${c.nama_kelas}</td><td>${c.tingkat}</td><td>${c.konsentrasi_keahlian}</td><td>${c.jumlah_siswa}</td><td><button type="button" class="btn btn-sm btn-primary" disabled>Edit</button></td></tr>`).join('');
       let tbMapel = $('tbody-mapel'); 
-      if(tbMapel) {
-        tbMapel.innerHTML = '';
-        if (!data.subjects || data.subjects.length === 0) {
-          tbMapel.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Data Mapel Kosong.</td></tr>';
-        } else {
-          data.subjects.forEach(s => {
-            let isAktif = String(s.status_aktif).toLowerCase() === 'true';
-            tbMapel.innerHTML += `<tr>
-              <td>${s.nama_mata_pelajaran}</td><td>${isAktif ? 'Aktif' : 'Nonaktif'}</td>
-              <td><button type="button" class="btn btn-sm btn-primary" disabled>Edit</button></td>
-            </tr>`;
-          });
-        }
-      }
+      if(tbMapel) tbMapel.innerHTML = data.subjects.map(s => `<tr><td>${s.nama_mata_pelajaran}</td><td>${String(s.status_aktif).toLowerCase() === 'true' ? 'Aktif' : 'Nonaktif'}</td><td><button type="button" class="btn btn-sm btn-primary" disabled>Edit</button></td></tr>`).join('');
     }).catch(err => alert("Error Admin: " + err.message));
   }
 
-  // --- REPORTS ---
   function initReports() {
     if (!$('repTglMulai')) return;
-
-    let today = new Date();
-    let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    let today = new Date(); let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     $('repTglMulai').value = firstDay.toISOString().split('T')[0];
     $('repTglSelesai').value = today.toISOString().split('T')[0];
-    
-    if($('tglCetak')) {
-      $('tglCetak').textContent = today.toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'});
-    }
+    if($('tglCetak')) $('tglCetak').textContent = today.toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'});
 
-    let sel = $('repKelas'); 
-    if(sel) sel.innerHTML = '<option value="">Memuat kelas...</option>';
-
+    let sel = $('repKelas'); if(sel) sel.innerHTML = '<option value="">Memuat kelas...</option>';
     callApi('api_getFormMasterData', state.token).then(data => {
-      if(!sel) return;
-      sel.innerHTML = '<option value="">Semua Kelas</option>';
-      
+      if(!sel) return; sel.innerHTML = '<option value="">Semua Kelas</option>';
       if (data && data.classes && data.classes.length > 0) {
-        data.classes.forEach(c => { 
-          sel.innerHTML += `<option value="${c.class_id}">${c.nama_kelas}</option>`; 
-        });
-      } else {
-        sel.innerHTML = '<option value="">(Data Kelas Kosong di Database)</option>';
-      }
-    }).catch(err => {
-      console.error("Error Load Filter Kelas:", err);
-      if(sel) sel.innerHTML = '<option value="">Gagal memuat</option>';
-    });
+        data.classes.forEach(c => { sel.innerHTML += `<option value="${c.class_id}">${c.nama_kelas}</option>`; });
+      } else { sel.innerHTML = '<option value="">(Data Kelas Kosong di Database)</option>'; }
+    }).catch(err => { if(sel) sel.innerHTML = '<option value="">Gagal memuat</option>'; });
   }
 
   window.loadReports = function() {
-    let filter = {
-      tgl_mulai: $('repTglMulai').value,
-      tgl_selesai: $('repTglSelesai').value,
-      class_id: $('repKelas').value
-    };
-    
-    let tb = $('tbody-reports'); 
-    if(!tb) return;
+    let filter = { tgl_mulai: $('repTglMulai').value, tgl_selesai: $('repTglSelesai').value, class_id: $('repKelas').value };
+    let tb = $('tbody-reports'); if(!tb) return;
     tb.innerHTML = '<tr><td colspan="12" class="text-center">Memuat data...</td></tr>';
-    
     callApi('api_getReports', state.token, filter).then(res => {
       tb.innerHTML = '';
-      if (res.data.length === 0) {
-        tb.innerHTML = '<tr><td colspan="12" class="text-center">Tidak ada data pada periode ini.</td></tr>';
-        return;
-      }
+      if (res.data.length === 0) { tb.innerHTML = '<tr><td colspan="12" class="text-center">Tidak ada data pada periode ini.</td></tr>'; return; }
       res.data.forEach((j, idx) => {
-        let guruTxt = j.guru;
-        if (j.guru_utama) guruTxt += ` <br><small class="text-danger">(Pengganti dari ${j.guru_utama})</small>`;
+        let guruTxt = j.guru; if (j.guru_utama) guruTxt += ` <br><small class="text-danger">(Pengganti dari ${j.guru_utama})</small>`;
         let ket = (j.kejadian && j.kejadian !== '-') ? j.kejadian : '';
-
-        tb.innerHTML += `<tr>
-          <td class="text-center">${idx+1}</td>
-          <td class="text-center">${j.tanggal}</td>
-          <td class="text-center">${j.nama_kelas}</td>
-          <td class="text-center">${j.jam}</td>
-          <td>${j.mapel}</td>
-          <td>${guruTxt}</td>
-          <td>${j.topik}</td>
-          <td class="text-center">${j.hadir}</td>
-          <td class="text-center">${j.sakit}</td>
-          <td class="text-center">${j.izin}</td>
-          <td class="text-center">${j.alpa}</td>
-          <td>${ket}</td>
-        </tr>`;
+        tb.innerHTML += `<tr><td class="text-center">${idx+1}</td><td class="text-center">${j.tanggal}</td><td class="text-center">${j.nama_kelas}</td><td class="text-center">${j.jam}</td><td>${j.mapel}</td><td>${guruTxt}</td><td>${j.topik}</td><td class="text-center">${j.hadir}</td><td class="text-center">${j.sakit}</td><td class="text-center">${j.izin}</td><td class="text-center">${j.alpa}</td><td>${ket}</td></tr>`;
       });
     }).catch(err => alert("Error Laporan: " + err.message));
   }
 
-  // --- BOOT (INISIALISASI) ---
   function boot() {
     state.token = localStorage.getItem(TOKEN_KEY);
-    
     if($('schoolName')) $('schoolName').textContent = 'SMK Muhammadiyah 1 Surakarta';
-    
-    if (!state.token) { 
-      show('view-login'); 
-      return; 
-    }
-    
+    if (!state.token) { show('view-login'); return; }
     callApi('api_getCurrentUser', state.token).then(function (data) { 
-      state.user = data.user; 
-      state.config = data.config || state.config; 
-      renderDashboard(data.user); 
+      state.user = data.user; state.config = data.config || state.config; renderDashboard(data.user); 
     }).catch(function (err) { 
-      console.error("Gagal validasi sesi:", err);
-      localStorage.removeItem(TOKEN_KEY); 
-      state.token = null; 
-      show('view-login'); 
+      localStorage.removeItem(TOKEN_KEY); state.token = null; show('view-login'); 
     });
   }
-
   document.addEventListener('DOMContentLoaded', boot);
 })();
