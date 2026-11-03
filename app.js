@@ -1,31 +1,34 @@
 (function () {
   'use strict';
   
-  // =========================================================
-  // PENTING: GANTI URL DI BAWAH INI DENGAN URL WEB APP GAS ANDA
+  // URL GAS ANDA
   const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyR93WUooPuW468-Rto5AMne17uvXw5XjzECPB5J1_4xrOjHTAVMr5AfFLSExnEX3F8/exec'; 
-  // =========================================================
- 
   var TOKEN_KEY = 'jhg_token';
   var $ = function (id) { return document.getElementById(id); };
   
-  // Ambil parameter kelas dari URL (untuk QR Code)
   const urlParams = new URLSearchParams(window.location.search);
   var urlKelas = urlParams.get('kelas') || '';
   
   var state = { token: null, user: null, config: {}, masterData: null, targetKelas: urlKelas };
 
-  // --- FUNGSI FETCH API (PENGGANTI google.script.run) ---
   async function callApi(action, token, data = {}) {
     try {
       const response = await fetch(GAS_API_URL, {
         method: 'POST',
-        // text/plain digunakan agar tidak memicu preflight request (CORS) di GAS
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: action, token: token, data: data })
       });
       
       const result = await response.json();
+      
+      // Jika sesi habis, tendang ke login
+      if (result.ok === false && (result.error.includes('Sesi tidak valid') || result.error.includes('AUTH_REQUIRED'))) {
+        localStorage.removeItem(TOKEN_KEY);
+        state.token = null; state.user = null;
+        show('view-login');
+        throw new Error('Sesi berakhir, silakan login ulang.'); 
+      }
+
       if (result.ok === false) throw new Error(result.error || 'Gagal.');
       return result.data;
     } catch (error) {
@@ -33,7 +36,6 @@
     }
   }
 
-  // --- NAVIGASI & TAMPILAN ---
   window.navigateTo = function(page) {
     var tplId = 'tpl-' + page;
     var tpl = document.getElementById(tplId);
@@ -113,33 +115,25 @@
 
   function renderDashboard(user) {
     show('view-dashboard');
-    navigateTo('dashboard');
+    // JIKA ADA QR CODE (?kelas=), LANGSUNG KE FORM JURNAL
+    if (state.targetKelas) {
+      navigateTo('form-jurnal');
+    } else {
+      navigateTo('dashboard');
+    }
   }
 
-  // --- AUTHENTICATION ---
-  function loadTeachers() {
-    callApi('api_getTeachers').then(function (teachers) {
-      var select = $('namaGuru');
-      if(!select) return;
-      select.innerHTML = '<option value="">-- Pilih Nama Anda --</option>';
-      teachers.forEach(function (t) {
-        var opt = document.createElement('option');
-        opt.value = t.nama_guru; opt.textContent = t.nama_guru;
-        select.appendChild(opt);
-      });
-    }).catch(function (err) { console.error('Gagal load guru:', err); });
-  }
-
+  // --- LOGIN SUBMIT ---
   document.addEventListener('submit', function (e) {
     if (e.target && e.target.id === 'form-login') {
       e.preventDefault();
-      var namaGuru = $('namaGuru').value;
+      var emailGuru = $('emailGuru').value.trim();
       var pin = $('pin').value.trim();
-      if (!namaGuru || !pin) return;
+      if (!emailGuru || !pin) return;
 
       $('btn-login').disabled = true; $('btn-login').textContent = 'Memproses...';
       
-      callApi('api_login', null, { namaGuru: namaGuru, pin: pin }).then(function (data) {
+      callApi('api_login', null, { emailGuru: emailGuru, pin: pin }).then(function (data) {
         state.token = data.token; 
         state.user = data.user;
         localStorage.setItem(TOKEN_KEY, data.token);
@@ -175,8 +169,10 @@
       if (kelas) {
         if($('jNamaKelas')) $('jNamaKelas').value = kelas.nama_kelas;
         if($('jKelas')) $('jKelas').value = kelas.class_id; 
+        if($('jSiswa')) $('jSiswa').value = kelas.jumlah_siswa || 36;
+        if(window.hitungHadir) window.hitungHadir();
       } else {
-        if($('jNamaKelas')) $('jNamaKelas').value = "Kelas tidak ditemukan di database: " + state.targetKelas;
+        if($('jNamaKelas')) $('jNamaKelas').value = "Kelas tidak ditemukan: " + state.targetKelas;
       }
 
       var selMapel = $('jMapel'); 
@@ -186,8 +182,6 @@
           data.subjects.forEach(s => { 
             selMapel.innerHTML += `<option value="${s.subject_id}">${s.nama_mata_pelajaran}</option>`; 
           });
-        } else {
-          selMapel.innerHTML = '<option value="">(Data Mapel Kosong di Sheet Subjects)</option>';
         }
       }
       
@@ -234,7 +228,13 @@
       
       callApi('api_saveJournal', state.token, payload).then(function (res) {
         alert('✅ ' + res.message); 
-        navigateTo('dashboard');
+        // Jika sukses simpan, kembalikan ke form kosong lagi jika scan dari QR
+        if(state.targetKelas) {
+          initFormJurnal(); // Reset form
+          btn.disabled = false; btn.textContent = 'Simpan Jurnal';
+        } else {
+          navigateTo('dashboard');
+        }
       }).catch(function (err) {
         alert('❌ ' + err.message); 
         btn.disabled = false; btn.textContent = 'Simpan Jurnal';
@@ -248,7 +248,6 @@
     if (!tbGuru) return;
 
     callApi('api_getAdminData', state.token).then(data => {
-      // Render GURU
       tbGuru.innerHTML = '';
       if (!data.users || data.users.length === 0) {
         tbGuru.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Data Guru Kosong.</td></tr>';
@@ -263,7 +262,6 @@
         });
       }
       
-      // Render KELAS
       let tbKelas = $('tbody-kelas'); 
       if(tbKelas) {
         tbKelas.innerHTML = '';
@@ -279,7 +277,6 @@
         }
       }
       
-      // Render MAPEL
       let tbMapel = $('tbody-mapel'); 
       if(tbMapel) {
         tbMapel.innerHTML = '';
@@ -298,13 +295,12 @@
     }).catch(err => alert("Error Admin: " + err.message));
   }
 
-    // --- REPORTS ---
+  // --- REPORTS ---
   function initReports() {
     if (!$('repTglMulai')) return;
 
     let today = new Date();
     let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    // Format YYYY-MM-DD
     $('repTglMulai').value = firstDay.toISOString().split('T')[0];
     $('repTglSelesai').value = today.toISOString().split('T')[0];
     
@@ -312,7 +308,6 @@
       $('tglCetak').textContent = today.toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'});
     }
 
-    // Tampilkan loading di dropdown
     let sel = $('repKelas'); 
     if(sel) sel.innerHTML = '<option value="">Memuat kelas...</option>';
 
@@ -329,8 +324,7 @@
       }
     }).catch(err => {
       console.error("Error Load Filter Kelas:", err);
-      if(sel) sel.innerHTML = '<option value="">Gagal memuat kelas (Sesi Habis)</option>';
-      alert("Sesi Anda mungkin telah berakhir. Silakan Logout lalu Login kembali untuk memuat data kelas.");
+      if(sel) sel.innerHTML = '<option value="">Gagal memuat</option>';
     });
   }
 
@@ -354,7 +348,6 @@
       res.data.forEach((j, idx) => {
         let guruTxt = j.guru;
         if (j.guru_utama) guruTxt += ` <br><small class="text-danger">(Pengganti dari ${j.guru_utama})</small>`;
-        
         let ket = (j.kejadian && j.kejadian !== '-') ? j.kejadian : '';
 
         tb.innerHTML += `<tr>
@@ -375,16 +368,13 @@
     }).catch(err => alert("Error Laporan: " + err.message));
   }
 
-  // --- BOOT (INISIALISASI AWAL) ---
+  // --- BOOT ---
   function boot() {
     state.token = localStorage.getItem(TOKEN_KEY);
-    
-    // Set nama sekolah langsung
     if($('schoolName')) $('schoolName').textContent = 'SMK Muhammadiyah 1 Surakarta';
     
     if (!state.token) { 
       show('view-login'); 
-      loadTeachers(); 
       return; 
     }
     
@@ -396,9 +386,10 @@
       localStorage.removeItem(TOKEN_KEY); 
       state.token = null; 
       show('view-login'); 
-      loadTeachers(); 
     });
   }
 
+  document.addEventListener('DOMContentLoaded', boot);
+})();
   document.addEventListener('DOMContentLoaded', boot);
 })();
