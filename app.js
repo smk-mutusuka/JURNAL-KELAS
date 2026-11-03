@@ -1,8 +1,12 @@
 (function () {
   'use strict';
-
-  // URL GAS ANDA
+  
+  // =========================================================
+  // ⚠️ PENTING: GANTI URL DI BAWAH INI DENGAN URL WEB APP GAS ANDA! ⚠️
+  // (URL yang berakhiran /exec, BUKAN URL editor)
   const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyR93WUooPuW468-Rto5AMne17uvXw5XjzECPB5J1_4xrOjHTAVMr5AfFLSExnEX3F8/exec'; 
+  // =========================================================
+
   var TOKEN_KEY = 'jhg_token';
   var $ = function (id) { return document.getElementById(id); };
   
@@ -11,17 +15,23 @@
   
   var state = { token: null, user: null, config: {}, masterData: null, targetKelas: urlKelas };
 
+  // --- FUNGSI FETCH API (Dengan Timeout) ---
   async function callApi(action, token, data = {}) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 detik batas waktu
+      
       const response = await fetch(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: action, token: token, data: data })
+        body: JSON.stringify({ action: action, token: token, data: data }),
+        signal: controller.signal
       });
       
+      clearTimeout(timeoutId);
       const result = await response.json();
       
-      // Jika sesi habis, tendang ke login
+      // Jika sesi habis
       if (result.ok === false && (result.error.includes('Sesi tidak valid') || result.error.includes('AUTH_REQUIRED'))) {
         localStorage.removeItem(TOKEN_KEY);
         state.token = null; state.user = null;
@@ -31,7 +41,11 @@
 
       if (result.ok === false) throw new Error(result.error || 'Gagal.');
       return result.data;
+      
     } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Koneksi ke server Google terlalu lama (Timeout). Periksa sinyal internet Anda.');
+      }
       throw new Error(error.message || 'Kesalahan jaringan.');
     }
   }
@@ -228,9 +242,8 @@
       
       callApi('api_saveJournal', state.token, payload).then(function (res) {
         alert('✅ ' + res.message); 
-        // Jika sukses simpan, kembalikan ke form kosong lagi jika scan dari QR
         if(state.targetKelas) {
-          initFormJurnal(); // Reset form
+          initFormJurnal(); 
           btn.disabled = false; btn.textContent = 'Simpan Jurnal';
         } else {
           navigateTo('dashboard');
@@ -368,28 +381,30 @@
     }).catch(err => alert("Error Laporan: " + err.message));
   }
 
-  // --- BOOT ---
+  // --- BOOT (INISIALISASI) ---
   function boot() {
     state.token = localStorage.getItem(TOKEN_KEY);
+    
     if($('schoolName')) $('schoolName').textContent = 'SMK Muhammadiyah 1 Surakarta';
     
+    // JIKA TIDAK ADA TOKEN, LANGSUNG TAMPILKAN LOGIN (Jangan tunggu API)
     if (!state.token) { 
       show('view-login'); 
       return; 
     }
     
+    // Jika ada token, validasi ke server
     callApi('api_getCurrentUser', state.token).then(function (data) { 
       state.user = data.user; 
       state.config = data.config || state.config; 
       renderDashboard(data.user); 
-    }).catch(function () { 
+    }).catch(function (err) { 
+      console.error("Gagal validasi sesi:", err);
       localStorage.removeItem(TOKEN_KEY); 
       state.token = null; 
       show('view-login'); 
     });
   }
 
-  document.addEventListener('DOMContentLoaded', boot);
-})();
   document.addEventListener('DOMContentLoaded', boot);
 })();
