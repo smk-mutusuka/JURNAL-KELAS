@@ -395,3 +395,28 @@
 
   document.addEventListener('DOMContentLoaded', boot);
 })();
+
+  function initFormJurnal() {
+    var today = new Date(); 
+    if($('jTanggal')) $('jTanggal').value = today.toISOString().split('T')[0];
+    
+    // --- TAMBAHKAN BARIS INI ---
+    // Otomatis isi nama guru yang sedang login
+    if($('jNamaPengisi')) $('jNamaPengisi').value = state.user.nama_guru;
+    // ---------------------------
+
+    var isPiket = state.user.roles.indexOf('piket') !== -1 || state.user.roles.indexOf('admin') !== -1;
+    if (isPiket && $('optPengganti')) { 
+      $('optPengganti').style.display = 'block'; 
+    } else {
+      // Jika bukan piket, pastikan tidak bisa memilih pengganti
+      if ($('optPengganti')) $('optPengganti').style.display = 'none';
+      if ($('jStatusGuru')) $('jStatusGuru').value = 'utama';
+    }
+
+    if (!state.targetKelas) {
+      alert("⚠️ Anda tidak membuka aplikasi dari QR Code kelas.\n\nSilakan scan QR Code di pintu kelas untuk mengisi jurnal.");
+      navigateTo('dashboard');
+      return;
+    }
+    // ... sisa kode di bawahnya biarkan sama ...
