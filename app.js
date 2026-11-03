@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  
+
   // URL GAS ANDA
   const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyR93WUooPuW468-Rto5AMne17uvXw5XjzECPB5J1_4xrOjHTAVMr5AfFLSExnEX3F8/exec'; 
   var TOKEN_KEY = 'jhg_token';
