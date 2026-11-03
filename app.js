@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-
+  
   // GANTI DENGAN URL WEB APP GAS ANDA
   const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyR93WUooPuW468-Rto5AMne17uvXw5XjzECPB5J1_4xrOjHTAVMr5AfFLSExnEX3F8/exec'; 
 
@@ -85,9 +85,9 @@
       }
     }
     if (page === 'form-jurnal') { setTimeout(initFormJurnal, 100); }
-    if (page === 'riwayat') { setTimeout(initRiwayat, 100); }
     if (page === 'admin') { setTimeout(initAdminPanel, 100); }
     if (page === 'laporan') { setTimeout(initReports, 100); }
+    if (page === 'riwayat') { setTimeout(initRiwayat, 100); }
   };
 
   window.closeSidebar = function() {
@@ -254,47 +254,32 @@
       });
     }).catch(err => alert("Error Laporan: " + err.message));
   }
-  // --- RIWAYAT JURNAL ---
+
   function initRiwayat() {
     let tb = $('tbody-riwayat');
     if (!tb) return;
-
     callApi('api_getMyJournals', state.token).then(res => {
       tb.innerHTML = '';
       if (!res.data || res.data.length === 0) {
         tb.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Belum ada jurnal yang pernah Anda isi.</td></tr>';
         return;
       }
-
       res.data.forEach(j => {
-        let statusBadge = j.status === 'pengganti' 
-          ? `<span class="badge bg-warning text-dark">Pengganti (dari ${j.guru_utama})</span>` 
-          : `<span class="badge bg-success">Guru Utama</span>`;
-          
-        tb.innerHTML += `<tr>
-          <td>${j.tanggal}</td>
-          <td class="fw-bold">${j.nama_kelas}</td>
-          <td>${j.jam}</td>
-          <td>${j.mapel}</td>
-          <td>${j.topik}</td>
-          <td class="text-center"><span class="text-success">${j.hadir}</span> / <span class="text-warning">${j.sakit}</span> / <span class="text-info">${j.izin}</span> / <span class="text-danger">${j.alpa}</span></td>
-          <td>${statusBadge}</td>
-        </tr>`;
+        let statusBadge = j.status === 'pengganti' ? `<span class="badge bg-warning text-dark">Pengganti (dari ${j.guru_utama})</span>` : `<span class="badge bg-success">Guru Utama</span>`;
+        tb.innerHTML += `<tr><td>${j.tanggal}</td><td class="fw-bold">${j.nama_kelas}</td><td>${j.jam}</td><td>${j.mapel}</td><td>${j.topik}</td><td class="text-center"><span class="text-success">${j.hadir}</span> / <span class="text-warning">${j.sakit}</span> / <span class="text-info">${j.izin}</span> / <span class="text-danger">${j.alpa}</span></td><td>${statusBadge}</td></tr>`;
       });
     }).catch(err => {
       tb.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-3">Gagal memuat riwayat: ${err.message}</td></tr>`;
     });
   }
-    // --- BOOT (INISIALISASI) ---
+
   function boot() {
     var urlParams = new URLSearchParams(window.location.search);
-    var urlToken = urlParams.get('token'); // Cek apakah ada tiket dari GAS
+    var urlToken = urlParams.get('token'); 
     
-    // Jika ada tiket, simpan ke localStorage
     if (urlToken) {
       localStorage.setItem(TOKEN_KEY, urlToken);
       state.token = urlToken;
-      // Bersihkan parameter token dari URL agar rapi
       window.history.replaceState({}, document.title, window.location.pathname + (state.targetKelas ? '?kelas=' + state.targetKelas : ''));
     } else {
       state.token = localStorage.getItem(TOKEN_KEY);
@@ -302,28 +287,28 @@
     
     if($('schoolName')) $('schoolName').textContent = 'SMK Muhammadiyah 1 Surakarta';
     
-    // Jika tetap tidak ada token, tampilkan form login manual
     if (!state.token) { 
       show('view-login'); 
+      if (state.targetKelas && $('warning-box')) {
+        $('warning-box').classList.remove('d-none');
+        $('warning-text').innerHTML = "🔒 Area Terbatas.<br>Silakan login dengan Email terdaftar untuk mengisi jurnal kelas <b>" + state.targetKelas + "</b>.";
+      }
       return; 
     }
     
-    // Jika ada token (dari QR atau dari localStorage), langsung Login
     callApi('api_getCurrentUser', state.token).then(function (data) { 
       state.user = data.user; 
       state.config = data.config || state.config; 
-      renderDashboard(data.user); // Ini akan otomatis lari ke form jurnal
+      renderDashboard(data.user); 
     }).catch(function (err) { 
-      // Jika token palsu / expired
       localStorage.removeItem(TOKEN_KEY); 
       state.token = null; 
       show('view-login'); 
-      if (state.targetKelas) {
-        let box = $('warning-box');
-        if (box) {
-          box.classList.remove('d-none');
-          $('warning-text').innerHTML = "Sesi Anda telah berakhir. Silakan login ulang.";
-        }
+      if (state.targetKelas && $('warning-box')) {
+        $('warning-box').classList.remove('d-none');
+        $('warning-text').innerHTML = "🔒 Area Terbatas.<br>Silakan login dengan Email terdaftar untuk mengisi jurnal kelas <b>" + state.targetKelas + "</b>.";
       }
     });
   }
+  document.addEventListener('DOMContentLoaded', boot);
+})();
