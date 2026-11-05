@@ -313,10 +313,22 @@
           <tbody id="tbody-reports"><tr><td colspan="12" class="text-center text-muted">Belum ada data.</td></tr></tbody>
         </table>
       </div>
+      
+      <!-- BAGIAN TANDA TANGAN YANG SUDAH DIPERBAIKI -->
       <div class="mt-5 d-flex justify-content-between">
-        <div>Mengetahui,<br>Kepala Sekolah<br><br><br><br><u>Joko Harinto, S.Pd., M.Pd.</u></div>
-        <div>Surakarta, <span id="tglCetak"></span><br>Petugas Kurikulum<br><br><br><br><u>........................................</u></div>
+        <div>
+          Mengetahui,<br>Kepala Sekolah<br><br><br><br>
+          <u>Joko Harinto, S.Pd., M.Pd.</u><br>
+          NIPM. 512 099 314
+        </div>
+        <div class="text-start">
+          Surakarta, <span id="tglCetak"></span><br>WKS Kurikulum<br><br><br><br>
+          <u>Nurul Khommariyah, S.Pd.</u><br>
+          NBM. 1132 707
+        </div>
       </div>
+      <!-- END BAGIAN TANDA TANGAN -->
+
     </div>
   </div>
 </div>
@@ -369,7 +381,7 @@
 (function () {
   'use strict';
 
-  // ⚠️ PASTIKAN URL DI BAWAH INI ADALAH URL /exec GAS ANDA YANG AKTIF
+  // ⚠️ GANTI DENGAN URL WEB APP GAS ANDA (Pastikan berakhiran /exec)
   const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyR93WUooPuW468-Rto5AMne17uvXw5XjzECPB5J1_4xrOjHTAVMr5AfFLSExnEX3F8/exec';
 
   var TOKEN_KEY = 'jhg_token';
@@ -817,19 +829,25 @@
     var tb = $('tbody-reports');
     if (!tb) return;
     tb.innerHTML = '<tr><td colspan="12" class="text-center">Memuat data…</td></tr>';
+    
     callApi('api_getReports', state.token, filter).then(function (res) {
       tb.innerHTML = '';
       if (!res.data || res.data.length === 0) {
         tb.innerHTML = '<tr><td colspan="12" class="text-center">Tidak ada data pada periode ini.</td></tr>';
         return;
       }
+      
       res.data.forEach(function (j, idx) {
         var guruTxt = j.guru;
         if (j.guru_utama) guruTxt += ' <br><small class="text-danger">(Pengganti dari ' + j.guru_utama + ')</small>';
         var ket = (j.kejadian && j.kejadian !== '-') ? j.kejadian : '';
+        
+        // Memotong format ISO (2026-11-02T17...) jadi (2026-11-02)
+        var tglClean = j.tanggal ? String(j.tanggal).split('T')[0] : '';
+
         tb.innerHTML += '<tr>' +
           '<td class="text-center">' + (idx + 1) + '</td>' +
-          '<td class="text-center">' + j.tanggal + '</td>' +
+          '<td class="text-center">' + tglClean + '</td>' +
           '<td class="text-center">' + j.nama_kelas + '</td>' +
           '<td class="text-center">' + j.jam + '</td>' +
           '<td>' + j.mapel + '</td>' +
@@ -881,7 +899,7 @@
 
     if (!state.token) {
       show('view-login');
-      loadTeachers(); // Memuat dropdown guru
+      loadTeachers();
       if (state.targetKelas && $('warning-box')) {
         $('warning-box').classList.remove('d-none');
         $('warning-text').innerHTML = '🔒 Login untuk mengisi jurnal kelas <b>' + state.targetKelas + '</b>.';
