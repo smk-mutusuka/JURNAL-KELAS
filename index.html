@@ -152,7 +152,7 @@
               <input type="date" class="form-control" id="jTanggal" required>
             </div>
             
-            <!-- Pilihan Kelas (Readonly untuk Kelas, Dropdown untuk Bengkel) -->
+            <!-- Pilihan Kelas (Readonly untuk Kelas, Dropdown untuk Bengkel/Lab) -->
             <div class="col-md-4" id="boxKelasNormal">
               <label class="form-label fw-bold">Kelas</label>
               <input type="text" class="form-control" id="jNamaKelas" readonly>
@@ -632,7 +632,7 @@
     if (isPiket && $('optPengganti')) $('optPengganti').style.display = 'block';
     else if ($('optPengganti')) $('optPengganti').style.display = 'none';
 
-    // LOGIKA KELAS vs BENGKEL
+    // LOGIKA KELAS vs BENGKEL/LAB
     if (state.targetLokasi) {
       if ($('boxKelasNormal')) $('boxKelasNormal').classList.add('d-none');
       if ($('boxKelasBengkel')) $('boxKelasBengkel').classList.remove('d-none');
