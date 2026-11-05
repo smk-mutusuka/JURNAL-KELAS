@@ -1,0 +1,442 @@
+<script>
+  (function () {
+    'use strict';
+    var TOKEN_KEY = 'jhg_token';
+    var $ = function (id) { return document.getElementById(id); };
+    
+    var urlKelas = typeof kelasFromUrl !== 'undefined' ? kelasFromUrl : '';
+    var state = { token: null, user: null, config: publicConfig || {}, masterData: null, targetKelas: urlKelas, adminData: null };
+
+    // --- SPA ROUTING ---
+    window.navigateTo = function(page) {
+      var tplId = 'tpl-' + page;
+      var tpl = document.getElementById(tplId);
+      if (!tpl) tpl = document.getElementById('tpl-dashboard');
+      
+      $('main-content').innerHTML = tpl.innerHTML;
+      
+      if (page === 'dashboard' && state.user) {
+        let h4 = document.querySelector('#main-content h4');
+        let h2 = document.getElementById('dashNamaGuru');
+        let pRole = document.getElementById('dashRole');
+        
+        if (h4) {
+          let bannerTitle = "Selamat Datang,";
+          if (state.targetKelas) {
+            let match = state.masterData ? state.masterData.classes.find(c => c.class_id === state.targetKelas) : null;
+            let namaKelas = match ? match.nama_kelas : state.targetKelas;
+            bannerTitle = "Selamat Datang di Kelas " + namaKelas;
+          }
+          h4.textContent = bannerTitle;
+        }
+        if (h2) h2.textContent = state.user.nama_guru;
+        if (pRole) pRole.textContent = "Peran: " + state.user.roles.join(', ').toUpperCase();
+
+        let btnLogout = document.getElementById('btn-logout');
+        if (btnLogout) {
+          btnLogout.onclick = function() {
+            if (!confirm('Keluar dari aplikasi?')) return;
+            var t = state.token; state.token = null; state.user = null;
+            localStorage.removeItem(TOKEN_KEY); 
+            if ($('menu-laporan')) $('menu-laporan').classList.add('d-none');
+            if ($('menu-admin')) $('menu-admin').classList.add('d-none');
+            show('view-login');
+            if (t) callApi('api_logout', t).catch(function () {});
+          };
+        }
+
+        var hasWali = state.user.roles.indexOf('wali_kelas') !== -1;
+        var hasAdmin = state.user.roles.indexOf('admin') !== -1;
+        var hasKuri = state.user.roles.indexOf('kurikulum') !== -1;
+        
+        let btnSidebar = document.getElementById('btn-sidebar');
+        if (hasWali || hasAdmin || hasKuri) {
+          if (btnSidebar) btnSidebar.classList.remove('d-none');
+          if ($('menu-laporan')) $('menu-laporan').classList.remove('d-none');
+          if (hasAdmin && $('menu-admin')) $('menu-admin').classList.remove('d-none');
+        } else {
+          if (btnSidebar) btnSidebar.classList.add('d-none');
+          if ($('menu-laporan')) $('menu-laporan').classList.add('d-none');
+          if ($('menu-admin')) $('menu-admin').classList.add('d-none');
+        }
+      }
+
+      if (page === 'form-jurnal') { setTimeout(initFormJurnal, 100); }
+      if (page === 'admin') { setTimeout(initAdminPanel, 100); }
+      if (page === 'laporan') { setTimeout(initReports, 100); }
+    };
+
+    window.closeSidebar = function() {
+      var sidebarEl = document.getElementById('sidebarMenu');
+      var sidebar = bootstrap.Offcanvas.getInstance(sidebarEl);
+      if (sidebar) sidebar.hide();
+    };
+
+    function show(view) {
+      ['view-loading', 'view-login', 'view-dashboard'].forEach(function (id) { 
+        var el = $(id); if(el) el.classList.toggle('active', id === view); 
+      });
+      if (view === 'view-login') {
+        if ($('btn-login')) { $('btn-login').disabled = false; $('btn-login').textContent = 'Masuk Aplikasi'; }
+        if ($('login-message')) $('login-message').innerHTML = '';
+        if ($('pin')) $('pin').value = '';
+      }
+    }
+
+    function callApi(fnName) {
+      var args = Array.prototype.slice.call(arguments, 1);
+      return new Promise(function (resolve, reject) {
+        var runner = google.script.run
+          .withSuccessHandler(function (resp) {
+            if (!resp) return reject(new Error('Respons kosong.'));
+            if (resp.ok === false) return reject(new Error(resp.error || 'Gagal.'));
+            resolve(resp.data);
+          })
+          .withFailureHandler(function (err) { reject(new Error((err && err.message) || 'Kesalahan jaringan.')); });
+          
+        if (fnName === 'api_getTeachers') runner.api_getTeachers();
+        else if (fnName === 'api_login') runner.api_login(args[0], args[1]);
+        else if (fnName === 'api_logout') runner.api_logout(args[0]);
+        else if (fnName === 'api_getCurrentUser') runner.api_getCurrentUser(args[0]);
+        else if (fnName === 'api_getFormMasterData') runner.api_getFormMasterData(args[0]);
+        else if (fnName === 'api_saveJournal') runner.api_saveJournal(args[0], args[1]);
+        else if (fnName === 'api_getAdminData') runner.api_getAdminData(args[0]);
+        else if (fnName === 'api_getReports') runner.api_getReports(args[0], args[1]);
+        // API Admin Save
+        else if (fnName === 'api_saveUser') runner.api_saveUser(args[0], args[1]);
+        else if (fnName === 'api_saveClass') runner.api_saveClass(args[0], args[1]);
+        else if (fnName === 'api_saveSubject') runner.api_saveSubject(args[0], args[1]);
+        else reject(new Error('Fungsi tidak dikenal: ' + fnName));
+      });
+    }
+
+    function renderDashboard(user) {
+      show('view-dashboard');
+      navigateTo('dashboard');
+    }
+
+    function loadTeachers() {
+      callApi('api_getTeachers').then(function (teachers) {
+        var select = $('namaGuru');
+        select.innerHTML = '<option value="">-- Pilih Nama Anda --</option>';
+        teachers.forEach(function (t) {
+          var opt = document.createElement('option');
+          opt.value = t.nama_guru; opt.textContent = t.nama_guru;
+          select.appendChild(opt);
+        });
+      }).catch(function (err) { console.error('Gagal load guru:', err); });
+    }
+
+    $('form-login').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var namaGuru = $('namaGuru').value;
+      var pin = $('pin').value.trim();
+      if (!namaGuru || !pin) return;
+
+      $('btn-login').disabled = true; $('btn-login').textContent = 'Memproses...';
+      
+      callApi('api_login', namaGuru, pin).then(function (data) {
+          state.token = data.token; state.user = data.user;
+          localStorage.setItem(TOKEN_KEY, data.token);
+          $('pin').value = ''; renderDashboard(data.user);
+        }).catch(function (err) { 
+          $('login-message').innerHTML = '<span class="text-danger">'+err.message+'</span>'; 
+          $('btn-login').disabled = false; $('btn-login').textContent = 'Masuk Aplikasi';
+        });
+    });
+
+    // --- FORM JURNAL ---
+    function initFormJurnal() {
+      var today = new Date(); $('jTanggal').value = today.toISOString().split('T')[0];
+      var isPiket = state.user.roles.indexOf('piket') !== -1 || state.user.roles.indexOf('admin') !== -1;
+      if (isPiket) { $('optPengganti').style.display = 'block'; }
+
+      if (!state.targetKelas) {
+        alert("⚠️ Anda tidak membuka aplikasi dari QR Code kelas.\n\nSilakan scan QR Code di pintu kelas untuk mengisi jurnal.");
+        navigateTo('dashboard');
+        return;
+      }
+
+      $('jMapel').innerHTML = '<option value="">Memuat data...</option>';
+
+      callApi('api_getFormMasterData', state.token).then(function (data) {
+        state.masterData = data;
+        
+        let kelas = data.classes.find(c => String(c.class_id).trim() === String(state.targetKelas).trim());
+        if (kelas) {
+          $('jNamaKelas').value = kelas.nama_kelas;
+          $('jKelas').value = kelas.class_id; 
+        } else {
+          $('jNamaKelas').value = "Kelas tidak ditemukan di database: " + state.targetKelas;
+        }
+
+        var selMapel = $('jMapel'); selMapel.innerHTML = '<option value="">-- Pilih Mapel --</option>';
+        if (data.subjects && data.subjects.length > 0) {
+          data.subjects.forEach(s => { 
+            selMapel.innerHTML += `<option value="${s.subject_id}">${s.nama_mata_pelajaran}</option>`; 
+          });
+        } else {
+          selMapel.innerHTML = '<option value="">(Data Mapel Kosong di Sheet Subjects)</option>';
+        }
+        
+        var selGuru = $('jGuruUtama'); selGuru.innerHTML = '<option value="">-- Pilih Guru --</option>';
+        data.teachers.forEach(t => { if (t.user_id !== state.user.user_id) selGuru.innerHTML += `<option value="${t.user_id}">${t.nama_guru}</option>`; });
+      }).catch(function (err) { 
+        console.error(err);
+        alert("Gagal memuat data dari server: " + err.message); 
+      });
+    }
+
+    window.toggleGuruPengganti = function() {
+      $('boxGuruPengganti').classList.toggle('d-none', $('jStatusGuru').value !== 'pengganti');
+    };
+
+    window.hitungHadir = function() {
+      var total = parseInt($('jSiswa').value) || 0, sakit = parseInt($('jSakit').value) || 0;
+      var izin = parseInt($('jIzin').value) || 0, alpa = parseInt($('jAlpa').value) || 0;
+      var hadir = total - (sakit + izin + alpa); $('jHadir').value = hadir < 0 ? 0 : hadir;
+    };
+
+    document.addEventListener('submit', function(e) {
+      if (e.target && e.target.id === 'formJurnal') {
+        e.preventDefault();
+        var btn = $('btnSimpan'); btn.disabled = true; btn.textContent = 'Menyimpan...';
+        var payload = {
+          tanggal: $('jTanggal').value, status_guru: $('jStatusGuru').value, guru_utama_id: $('jGuruUtama').value,
+          class_id: $('jKelas').value, subject_id: $('jMapel').value, jam_mulai: $('jJamMulai').value,
+          jam_selesai: $('jJamSelesai').value, topik: $('jTopik').value, jumlah_siswa: $('jSiswa').value,
+          jumlah_sakit: $('jSakit').value, jumlah_izin: $('jIzin').value, jumlah_alpa: $('jAlpa').value,
+          kejadian: $('jKejadian').value
+        };
+        callApi('api_saveJournal', state.token, payload).then(function (res) {
+            alert('✅ ' + res.message); navigateTo('dashboard');
+          }).catch(function (err) {
+            alert('❌ ' + err.message); btn.disabled = false; btn.textContent = 'Simpan Jurnal';
+          });
+      }
+    });
+
+    // ================= ADMIN LOGIC =================
+    function initAdminPanel() {
+      let tbGuru = $('tbody-guru'); 
+      if (!tbGuru) return;
+
+      callApi('api_getAdminData', state.token).then(data => {
+        state.adminData = data; // Simpan data untuk dipakai di Modal Edit
+        
+        // Render GURU
+        tbGuru.innerHTML = '';
+        if (!data.users || data.users.length === 0) {
+          tbGuru.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Data Guru Kosong.</td></tr>';
+        } else {
+          data.users.forEach(u => {
+            let isAktif = String(u.status_aktif).toLowerCase() === 'true';
+            tbGuru.innerHTML += `<tr>
+              <td>${u.nama_guru}</td><td>${u.email}</td><td><span class="badge bg-secondary">${u.role}</span></td>
+              <td>${isAktif ? '<span class="text-success">Aktif</span>' : '<span class="text-danger">Nonaktif</span>'}</td>
+              <td><button type="button" class="btn btn-sm btn-primary" onclick="openUserModal('${u.user_id}')">Edit</button></td>
+            </tr>`;
+          });
+        }
+        
+        // Render KELAS
+        let tbKelas = $('tbody-kelas'); tbKelas.innerHTML = '';
+        data.classes.forEach(c => {
+          let isAktif = String(c.status_aktif).toLowerCase() === 'true';
+          tbKelas.innerHTML += `<tr>
+            <td>${c.nama_kelas}</td><td>${c.tingkat}</td><td>${c.konsentrasi_keahlian}</td><td>${c.jumlah_siswa}</td>
+            <td><button type="button" class="btn btn-sm btn-primary" onclick="openClassModal('${c.class_id}')">Edit</button></td>
+          </tr>`;
+        });
+        
+        // Render MAPEL
+        let tbMapel = $('tbody-mapel'); tbMapel.innerHTML = '';
+        data.subjects.forEach(s => {
+          let isAktif = String(s.status_aktif).toLowerCase() === 'true';
+          tbMapel.innerHTML += `<tr>
+            <td>${s.nama_mata_pelajaran}</td><td>${isAktif ? 'Aktif' : 'Nonaktif'}</td>
+            <td><button type="button" class="btn btn-sm btn-primary" onclick="openSubjectModal('${s.subject_id}')">Edit</button></td>
+          </tr>`;
+        });
+      }).catch(err => alert("Error Admin: " + err.message));
+    }
+
+    // --- MODAL GURU ---
+    window.openUserModal = function(id) {
+      var isEdit = !!id;
+      $('titleUser').textContent = isEdit ? 'Edit Data Guru' : 'Tambah Guru Baru';
+      $('uId').value = id || '';
+      $('uPin').value = ''; // Selalu kosongkan PIN saat buka form
+
+      if (isEdit) {
+        let user = state.adminData.users.find(x => x.user_id === id);
+        $('uNama').value = user.nama_guru || '';
+        $('uEmail').value = user.email || '';
+        $('uRole').value = user.role || '';
+        $('uAktif').checked = String(user.status_aktif).toLowerCase() === 'true';
+      } else {
+        $('uNama').value = ''; $('uEmail').value = ''; $('uRole').value = ''; $('uAktif').checked = true;
+      }
+      new bootstrap.Modal(document.getElementById('modalUser')).show();
+    };
+
+    window.saveUser = function() {
+      var data = {
+        user_id: $('uId').value,
+        nama_guru: $('uNama').value,
+        email: $('uEmail').value,
+        role: $('uRole').value,
+        pin: $('uPin').value,
+        status_aktif: $('uAktif').checked
+      };
+      if (!data.nama_guru || !data.email) return alert("Nama dan Email wajib diisi!");
+
+      callApi('api_saveUser', state.token, data).then(res => {
+        alert('✅ ' + res.message);
+        bootstrap.Modal.getInstance(document.getElementById('modalUser')).hide();
+        initAdminPanel(); // Reload tabel
+      }).catch(err => alert('❌ ' + err.message));
+    };
+
+    // --- MODAL KELAS ---
+    window.openClassModal = function(id) {
+      var isEdit = !!id;
+      $('titleKelas').textContent = isEdit ? 'Edit Data Kelas' : 'Tambah Kelas Baru';
+      $('kId').value = id || '';
+
+      if (isEdit) {
+        let c = state.adminData.classes.find(x => x.class_id === id);
+        $('kNama').value = c.nama_kelas || '';
+        $('kTingkat').value = c.tingkat || '';
+        $('kKonsentrasi').value = c.konsentrasi_keahlian || '';
+        $('kJumlah').value = c.jumlah_siswa || 36;
+        $('kAktif').checked = String(c.status_aktif).toLowerCase() === 'true';
+      } else {
+        $('kNama').value = ''; $('kTingkat').value = ''; $('kKonsentrasi').value = ''; $('kJumlah').value = 36; $('kAktif').checked = true;
+      }
+      new bootstrap.Modal(document.getElementById('modalKelas')).show();
+    };
+
+    window.saveClass = function() {
+      var data = {
+        class_id: $('kId').value,
+        nama_kelas: $('kNama').value,
+        tingkat: $('kTingkat').value,
+        konsentrasi_keahlian: $('kKonsentrasi').value,
+        jumlah_siswa: $('kJumlah').value,
+        status_aktif: $('kAktif').checked
+      };
+      if (!data.nama_kelas || !data.tingkat) return alert("Nama dan Tingkat wajib diisi!");
+
+      callApi('api_saveClass', state.token, data).then(res => {
+        alert('✅ ' + res.message);
+        bootstrap.Modal.getInstance(document.getElementById('modalKelas')).hide();
+        initAdminPanel(); // Reload tabel
+      }).catch(err => alert('❌ ' + err.message));
+    };
+
+    // --- MODAL MAPEL ---
+    window.openSubjectModal = function(id) {
+      var isEdit = !!id;
+      $('titleMapel').textContent = isEdit ? 'Edit Data Mapel' : 'Tambah Mapel Baru';
+      $('mId').value = id || '';
+
+      if (isEdit) {
+        let s = state.adminData.subjects.find(x => x.subject_id === id);
+        $('mNama').value = s.nama_mata_pelajaran || '';
+        $('mAktif').checked = String(s.status_aktif).toLowerCase() === 'true';
+      } else {
+        $('mNama').value = ''; $('mAktif').checked = true;
+      }
+      new bootstrap.Modal(document.getElementById('modalMapel')).show();
+    };
+
+    window.saveSubject = function() {
+      var data = {
+        subject_id: $('mId').value,
+        nama_mata_pelajaran: $('mNama').value,
+        status_aktif: $('mAktif').checked
+      };
+      if (!data.nama_mata_pelajaran) return alert("Nama Mapel wajib diisi!");
+
+      callApi('api_saveSubject', state.token, data).then(res => {
+        alert('✅ ' + res.message);
+        bootstrap.Modal.getInstance(document.getElementById('modalMapel')).hide();
+        initAdminPanel(); // Reload tabel
+      }).catch(err => alert('❌ ' + err.message));
+    };
+
+    // ================= LAPORAN LOGIC =================
+    function initReports() {
+      if (!$('repTglMulai')) return;
+
+      let today = new Date();
+      let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      $('repTglMulai').value = firstDay.toISOString().split('T')[0];
+      $('repTglSelesai').value = today.toISOString().split('T')[0];
+      $('tglCetak').textContent = today.toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'});
+
+      callApi('api_getFormMasterData', state.token).then(data => {
+        let sel = $('repKelas'); 
+        sel.innerHTML = '<option value="">Semua Kelas</option>';
+        if (data && data.classes && data.classes.length > 0) {
+          data.classes.forEach(c => { sel.innerHTML += `<option value="${c.class_id}">${c.nama_kelas}</option>`; });
+        }
+      }).catch(err => console.error("Error Load Filter Kelas:", err));
+    }
+
+    window.loadReports = function() {
+      let filter = {
+        tgl_mulai: $('repTglMulai').value,
+        tgl_selesai: $('repTglSelesai').value,
+        class_id: $('repKelas').value
+      };
+      
+      let tb = $('tbody-reports'); 
+      tb.innerHTML = '<tr><td colspan="12" class="text-center">Memuat data...</td></tr>';
+      
+      callApi('api_getReports', state.token, filter).then(res => {
+        tb.innerHTML = '';
+        if (res.data.length === 0) {
+          tb.innerHTML = '<tr><td colspan="12" class="text-center">Tidak ada data pada periode ini.</td></tr>';
+          return;
+        }
+        res.data.forEach((j, idx) => {
+          let guruTxt = j.guru;
+          if (j.guru_utama) guruTxt += ` <br><small class="text-danger">(Pengganti dari ${j.guru_utama})</small>`;
+          let ket = (j.kejadian && j.kejadian !== '-') ? j.kejadian : '';
+
+          tb.innerHTML += `<tr>
+            <td class="text-center">${idx+1}</td>
+            <td class="text-center">${j.tanggal}</td>
+            <td class="text-center">${j.nama_kelas}</td>
+            <td class="text-center">${j.jam}</td>
+            <td>${j.mapel}</td>
+            <td>${guruTxt}</td>
+            <td>${j.topik}</td>
+            <td class="text-center">${j.hadir}</td>
+            <td class="text-center">${j.sakit}</td>
+            <td class="text-center">${j.izin}</td>
+            <td class="text-center">${j.alpa}</td>
+            <td>${ket}</td>
+          </tr>`;
+        });
+      }).catch(err => alert("Error Laporan: " + err.message));
+    }
+
+    // BOOT
+    function boot() {
+      state.token = localStorage.getItem(TOKEN_KEY);
+      $('schoolName').textContent = (state.config && state.config.schoolName) || '';
+      if (!state.token) { show('view-login'); loadTeachers(); return; }
+      
+      callApi('api_getCurrentUser', state.token).then(function (data) { 
+          state.user = data.user; state.config = data.config || state.config; renderDashboard(data.user); 
+        }).catch(function () { 
+          localStorage.removeItem(TOKEN_KEY); state.token = null; show('view-login'); loadTeachers(); 
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', boot);
+  })();
+</script>
