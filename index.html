@@ -158,9 +158,10 @@
               <input type="text" class="form-control" id="jNamaKelas" readonly>
               <input type="hidden" id="jKelas">
             </div>
+            <!-- HAPUS ATRIBUT REQUIRED DI SINI BIAR TIDAK NYANGKUT -->
             <div class="col-md-4 d-none" id="boxKelasBengkel">
               <label class="form-label fw-bold">Pilih Kelas</label>
-              <select class="form-select" id="jKelasSelect" required></select>
+              <select class="form-select" id="jKelasSelect"></select>
             </div>
             
             <div class="col-md-4">
@@ -255,6 +256,7 @@
               <textarea class="form-control" id="jKejadian" rows="2"></textarea>
             </div>
             <div class="col-12">
+              <!-- KEMBALI KE TYPE SUBMIT -->
               <button type="submit" id="btnSimpan" class="btn btn-primary w-100 fw-bold">Simpan Jurnal</button>
             </div>
           </div>
@@ -712,19 +714,13 @@
     $('jHadir').value = h < 0 ? 0 : h;
   };
 
-    document.addEventListener('submit', function (e) {
+  document.addEventListener('submit', function (e) {
     if (e.target && e.target.id === 'formJurnal') {
       e.preventDefault();
       
-      // --- VALIDASI MANUAL ---
       var classId = state.targetLokasi ? $('jKelasSelect').value : $('jKelas').value;
-      if (!classId) return alert('⚠️ Kelas belum dipilih!');
-      if (!$('jMapel').value) return alert('⚠️ Mata Pelajaran belum dipilih!');
-      if (!$('jJamMulai').value) return alert('⚠️ Jam Mulai belum dipilih!');
-      if (!$('jJamSelesai').value) return alert('⚠️ Jam Selesai belum dipilih!');
-      if (!$('jTopik').value || $('jTopik').value.trim().length < 3) return alert('⚠️ Topik pembelajaran minimal 3 karakter!');
-      // -----------------------
-
+      if (!classId) return alert('Silakan pilih kelas terlebih dahulu!');
+      
       var btn = $('btnSimpan');
       btn.disabled = true; btn.textContent = 'Menyimpan...';
       
