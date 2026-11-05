@@ -493,23 +493,28 @@
 
   // ============= LOGIN =============
   document.addEventListener('submit', function (e) {
-    if (e.target && e.target.id === 'form-login') {
-      e.preventDefault();
-      var email = $('emailGuru').value.trim();
-      var pin = $('pin').value.trim();
-      if (!email || !pin) return;
-      $('btn-login').disabled = true; $('btn-login').textContent = 'Memproses...';
-      callApi('api_login', null, { emailGuru: email, pin: pin }).then(function (data) {
-        state.token = data.token; state.user = data.user;
-        localStorage.setItem(TOKEN_KEY, data.token);
-        $('pin').value = '';
-        renderDashboard(data.user);
-      }).catch(function (err) {
-        $('login-message').innerHTML = '<span class="text-danger">' + err.message + '</span>';
-        $('btn-login').disabled = false; $('btn-login').textContent = 'Masuk Aplikasi';
-      });
-    }
-  });
+  if (e.target && e.target.id === 'form-login') {
+    e.preventDefault();
+    var userId = $('namaGuru').value;
+    var pin = $('pin').value.trim();
+    if (!userId || !pin) return;
+
+    $('btn-login').disabled = true;
+    $('btn-login').textContent = 'Memproses...';
+
+    callApi('api_login', null, { user_id: userId, pin: pin }).then(function (data) {
+      state.token = data.token;
+      state.user = data.user;
+      localStorage.setItem(TOKEN_KEY, data.token);
+      $('pin').value = '';
+      renderDashboard(data.user);   // ← otomatis ke form-jurnal kalau ada ?kelas=
+    }).catch(function (err) {
+      $('login-message').innerHTML = '<span class="text-danger">' + err.message + '</span>';
+      $('btn-login').disabled = false;
+      $('btn-login').textContent = 'Masuk Aplikasi';
+    });
+  }
+});
 
   // ============= FORM JURNAL =============
   function initFormJurnal() {
