@@ -15,7 +15,7 @@
       .d-print-none,.offcanvas,.navbar{display:none!important}
       #main-content{margin:0!important;padding:0!important}
       .container{max-width:100%!important;width:100%!important;margin:0!important}
-      #print-area{box-shadow:none!important;border:none!important;padding:0!important}
+      #print-area, #print-area-riwayat {box-shadow:none!important;border:none!important;padding:0!important}
       table{width:100%!important;border-collapse:collapse!important}
       th,td{border:1px solid #000!important;padding:4px!important}
       @page{size:A4 landscape;margin:1cm}
@@ -221,23 +221,56 @@
   </div>
 </div>
 
+<!-- RIWAYAT JURNAL SAYA -->
 <div id="tpl-riwayat" style="display:none">
-  <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
       <h4 class="fw-bold m-0">📚 Riwayat Jurnal Saya</h4>
-      <button class="btn btn-outline-secondary btn-sm" onclick="navigateTo('dashboard')">Kembali</button>
+      <div>
+        <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="navigateTo('dashboard')">Kembali</button>
+        <button type="button" class="btn btn-success fw-bold btn-sm" onclick="window.print()">🖨️ Cetak</button>
+      </div>
     </div>
-    <div class="card shadow-sm border-0">
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle">
-            <thead class="table-light">
-              <tr><th>Tanggal</th><th>Kelas</th><th>Jam</th><th>Mapel</th><th>Topik</th><th class="text-center">S/I/A</th><th>Status</th></tr>
-            </thead>
-            <tbody id="tbody-riwayat">
-              <tr><td colspan="7" class="text-center text-muted">Memuat…</td></tr>
-            </tbody>
-          </table>
+    
+    <div id="print-area-riwayat" class="bg-white p-4 shadow-sm border-0">
+      <div class="text-center mb-4">
+        <h3 class="fw-bold m-0">SMK MUHAMMADIYAH 1 SURAKARTA</h3>
+        <p class="m-0">Riwayat Jurnal Harian Guru</p><hr>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-bordered table-sm" style="font-size:12px">
+          <thead class="table-light text-center">
+            <tr>
+              <th style="width:30px">No</th>
+              <th style="width:80px">Tanggal</th>
+              <th style="width:70px">Kelas</th>
+              <th style="width:80px">Jam</th>
+              <th>Mapel</th>
+              <th>Topik</th>
+              <th style="width:40px">Hadir</th>
+              <th style="width:25px">S</th>
+              <th style="width:25px">I</th>
+              <th style="width:25px">A</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-riwayat">
+            <tr><td colspan="11" class="text-center text-muted">Memuat…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Tanda Tangan Cetak Riwayat -->
+      <div class="mt-5 d-flex justify-content-between">
+        <div>
+          Mengetahui,<br>Kepala Sekolah<br><br><br><br>
+          <u>Joko Harinto, S.Pd., M.Pd.</u><br>
+          NIPM. 512 099 314
+        </div>
+        <div class="text-start">
+          Surakarta, <span id="tglCetakRiwayat"></span><br>Guru<br><br><br><br>
+          <u><span id="ttdNamaGuru"></span></u><br>
+          NBM. <span id="ttdNbmGuru"></span>
         </div>
       </div>
     </div>
@@ -259,7 +292,7 @@
       <div class="tab-pane fade show active" id="tab-guru">
         <button type="button" class="btn btn-success btn-sm mb-3 fw-bold" onclick="openUserModal()">+ Tambah Guru</button>
         <div class="table-responsive"><table class="table table-hover align-middle">
-          <thead class="table-light"><tr><th>Nama Guru</th><th>Email</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead>
+          <thead class="table-light"><tr><th>Nama Guru</th><th>Email</th><th>NBM/NIPM</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead>
           <tbody id="tbody-guru"></tbody>
         </table></div>
       </div>
@@ -314,7 +347,6 @@
         </table>
       </div>
       
-      <!-- BAGIAN TANDA TANGAN YANG SUDAH DIPERBAIKI -->
       <div class="mt-5 d-flex justify-content-between">
         <div>
           Mengetahui,<br>Kepala Sekolah<br><br><br><br>
@@ -327,8 +359,6 @@
           NBM. 1132 707
         </div>
       </div>
-      <!-- END BAGIAN TANDA TANGAN -->
-
     </div>
   </div>
 </div>
@@ -341,6 +371,7 @@
       <input type="hidden" id="uId">
       <div class="mb-2"><label class="form-label">Nama Lengkap & Gelar</label><input type="text" class="form-control" id="uNama" required></div>
       <div class="mb-2"><label class="form-label">Email</label><input type="email" class="form-control" id="uEmail" required></div>
+      <div class="mb-2"><label class="form-label">NBM / NIPM</label><input type="text" class="form-control" id="uNbm" placeholder="Contoh: 1132 707"></div>
       <div class="mb-2"><label class="form-label">Role (pisahkan koma)</label><input type="text" class="form-control" id="uRole" placeholder="guru,wali_kelas,piket"></div>
       <div class="mb-2"><label class="form-label">PIN (kosongkan jika tidak diubah)</label><input type="text" class="form-control" id="uPin" placeholder="6 digit/karakter"></div>
       <div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="uAktif"><label class="form-check-label" for="uAktif">Akun Aktif</label></div>
@@ -498,7 +529,6 @@
 
   function renderDashboard(user) {
     show('view-dashboard');
-    // JIKA ADA PARAMETER KELAS DI URL (HASIL SCAN QR), LANGSUNG KE FORM JURNAL
     if (state.targetKelas) navigateTo('form-jurnal');
     else navigateTo('dashboard');
   }
@@ -655,13 +685,14 @@
       var tbGuru = $('tbody-guru');
       tbGuru.innerHTML = '';
       if (!data.users || data.users.length === 0) {
-        tbGuru.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Data Guru Kosong.</td></tr>';
+        tbGuru.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Data Guru Kosong.</td></tr>';
       } else {
         data.users.forEach(function (u) {
           var isAktif = String(u.status_aktif).toLowerCase() === 'true';
           tbGuru.innerHTML += '<tr>' +
             '<td>' + (u.nama_guru || '') + '</td>' +
             '<td>' + (u.email || '') + '</td>' +
+            '<td>' + (u.NBM_guru || '-') + '</td>' +
             '<td><span class="badge bg-secondary">' + (u.role || '') + '</span></td>' +
             '<td>' + (isAktif ? '<span class="text-success">Aktif</span>' : '<span class="text-danger">Nonaktif</span>') + '</td>' +
             '<td><button type="button" class="btn btn-sm btn-primary" onclick="openUserModal(\'' + u.user_id + '\')">Edit</button></td>' +
@@ -707,11 +738,12 @@
       if (user) {
         $('uNama').value = user.nama_guru || '';
         $('uEmail').value = user.email || '';
+        $('uNbm').value = user.NBM_guru || '';
         $('uRole').value = user.role || '';
         $('uAktif').checked = String(user.status_aktif).toLowerCase() === 'true';
       }
     } else {
-      $('uNama').value = ''; $('uEmail').value = ''; $('uRole').value = ''; $('uAktif').checked = true;
+      $('uNama').value = ''; $('uEmail').value = ''; $('uNbm').value = ''; $('uRole').value = ''; $('uAktif').checked = true;
     }
     new bootstrap.Modal(document.getElementById('modalUser')).show();
   };
@@ -721,6 +753,7 @@
       user_id: $('uId').value,
       nama_guru: $('uNama').value,
       email: $('uEmail').value,
+      nbm_guru: $('uNbm').value,
       role: $('uRole').value,
       pin: $('uPin').value,
       status_aktif: $('uAktif').checked
@@ -842,11 +875,9 @@
         if (j.guru_utama) guruTxt += ' <br><small class="text-danger">(Pengganti dari ' + j.guru_utama + ')</small>';
         var ket = (j.kejadian && j.kejadian !== '-') ? j.kejadian : '';
         
-        // Ambil YYYY-MM-DD dulu
-      var tglStr = j.tanggal ? String(j.tanggal).split('T')[0] : '';
-      // Pecah dan susun ulang jadi DD-MM-YYYY
-      var tglParts = tglStr.split('-');
-      var tglClean = tglParts.length === 3 ? (tglParts[2] + '-' + tglParts[1] + '-' + tglParts[0]) : tglStr;
+        var tglStr = j.tanggal ? String(j.tanggal).split('T')[0] : '';
+        var tglParts = tglStr.split('-');
+        var tglClean = tglParts.length === 3 ? (tglParts[2] + '-' + tglParts[1] + '-' + tglParts[0]) : tglStr;
 
         tb.innerHTML += '<tr>' +
           '<td class="text-center">' + (idx + 1) + '</td>' +
@@ -868,30 +899,46 @@
 
   // ============= RIWAYAT =============
   function initRiwayat() {
+    var today = new Date();
+    if ($('tglCetakRiwayat')) $('tglCetakRiwayat').textContent = today.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    
+    // Ambil nama dan NBM dari state user
+    if ($('ttdNamaGuru')) $('ttdNamaGuru').textContent = state.user.nama_guru;
+    if ($('ttdNbmGuru')) $('ttdNbmGuru').textContent = state.user.nbm_guru || '.........................';
+
     var tb = $('tbody-riwayat');
     if (!tb) return;
     callApi('api_getMyJournals', state.token).then(function (res) {
       tb.innerHTML = '';
       if (!res.data || res.data.length === 0) {
-        tb.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Belum ada jurnal yang pernah Anda isi.</td></tr>';
+        tb.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-3">Belum ada jurnal yang pernah Anda isi.</td></tr>';
         return;
       }
-      res.data.forEach(function (j) {
+      res.data.forEach(function (j, idx) {
+        var tglStr = j.tanggal ? String(j.tanggal).split('T')[0] : '';
+        var tglParts = tglStr.split('-');
+        var tglClean = tglParts.length === 3 ? (tglParts[2] + '-' + tglParts[1] + '-' + tglParts[0]) : tglStr;
+
         var badge = j.status === 'pengganti'
           ? '<span class="badge bg-warning text-dark">Pengganti (dari ' + (j.guru_utama || '-') + ')</span>'
           : '<span class="badge bg-success">Guru Utama</span>';
+        
         tb.innerHTML += '<tr>' +
-          '<td>' + j.tanggal + '</td>' +
-          '<td class="fw-bold">' + j.nama_kelas + '</td>' +
-          '<td>' + j.jam + '</td>' +
+          '<td class="text-center">' + (idx + 1) + '</td>' +
+          '<td class="text-center">' + tglClean + '</td>' +
+          '<td class="text-center fw-bold">' + j.nama_kelas + '</td>' +
+          '<td class="text-center">' + j.jam + '</td>' +
           '<td>' + j.mapel + '</td>' +
           '<td>' + j.topik + '</td>' +
-          '<td class="text-center"><span class="text-success">' + j.hadir + '</span> / <span class="text-warning">' + j.sakit + '</span> / <span class="text-info">' + j.izin + '</span> / <span class="text-danger">' + j.alpa + '</span></td>' +
-          '<td>' + badge + '</td>' +
+          '<td class="text-center">' + j.hadir + '</td>' +
+          '<td class="text-center">' + j.sakit + '</td>' +
+          '<td class="text-center">' + j.izin + '</td>' +
+          '<td class="text-center">' + j.alpa + '</td>' +
+          '<td class="text-center">' + badge + '</td>' +
         '</tr>';
       });
     }).catch(function (err) {
-      tb.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Gagal memuat riwayat: ' + err.message + '</td></tr>';
+      tb.innerHTML = '<tr><td colspan="11" class="text-center text-danger py-3">Gagal memuat riwayat: ' + err.message + '</td></tr>';
     });
   }
 
