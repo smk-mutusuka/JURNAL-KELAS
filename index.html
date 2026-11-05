@@ -842,8 +842,11 @@
         if (j.guru_utama) guruTxt += ' <br><small class="text-danger">(Pengganti dari ' + j.guru_utama + ')</small>';
         var ket = (j.kejadian && j.kejadian !== '-') ? j.kejadian : '';
         
-        // Memotong format ISO (2026-11-02T17...) jadi (2026-11-02)
-        var tglClean = j.tanggal ? String(j.tanggal).split('T')[0] : '';
+        // Ambil YYYY-MM-DD dulu
+      var tglStr = j.tanggal ? String(j.tanggal).split('T')[0] : '';
+      // Pecah dan susun ulang jadi DD-MM-YYYY
+      var tglParts = tglStr.split('-');
+      var tglClean = tglParts.length === 3 ? (tglParts[2] + '-' + tglParts[1] + '-' + tglParts[0]) : tglStr;
 
         tb.innerHTML += '<tr>' +
           '<td class="text-center">' + (idx + 1) + '</td>' +
