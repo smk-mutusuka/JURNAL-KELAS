@@ -187,14 +187,45 @@
               <label class="form-label fw-bold">Mata Pelajaran</label>
               <select class="form-select" id="jMapel" required></select>
             </div>
+            
+            <!-- DROPDOWN JAM MULAI & SELESAI -->
             <div class="col-md-3">
               <label class="form-label fw-bold">Jam Mulai</label>
-              <input type="number" class="form-control" id="jJamMulai" min="1" max="12" required>
+              <select class="form-select" id="jJamMulai" required>
+                <option value="">-- Pilih --</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+              </select>
             </div>
             <div class="col-md-3">
               <label class="form-label fw-bold">Jam Selesai</label>
-              <input type="number" class="form-control" id="jJamSelesai" min="1" max="12" required>
+              <select class="form-select" id="jJamSelesai" required>
+                <option value="">-- Pilih --</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+              </select>
             </div>
+            
             <div class="col-12">
               <label class="form-label fw-bold">Topik Pembelajaran</label>
               <input type="text" class="form-control" id="jTopik" required minlength="3" placeholder="Contoh: Pengenalan Dasar Pengelasan">
@@ -354,7 +385,7 @@
       <div class="table-responsive">
         <table class="table table-bordered table-sm" style="font-size:12px">
           <thead class="table-light text-center">
-            <!-- Kolom Lokasi Dihapus -->
+            <!-- Kolom Lokasi Dihapus, Lokasi Masuk Keterangan -->
             <tr><th style="width:30px">No</th><th style="width:80px">Tanggal</th><th style="width:70px">Kelas</th><th style="width:80px">Jam</th><th>Mapel</th><th>Guru Pengisi</th><th>Topik</th><th style="width:40px">Hadir</th><th style="width:25px">S</th><th style="width:25px">I</th><th style="width:25px">A</th><th>Keterangan</th></tr>
           </thead>
           <tbody id="tbody-reports"><tr><td colspan="12" class="text-center text-muted">Belum ada data.</td></tr></tbody>
@@ -426,7 +457,6 @@
 (function () {
   'use strict';
 
-  // ⚠️ GANTI DENGAN URL WEB APP GAS ANDA (Pastikan berakhiran /exec)
   const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyR93WUooPuW468-Rto5AMne17uvXw5XjzECPB5J1_4xrOjHTAVMr5AfFLSExnEX3F8/exec';
 
   var TOKEN_KEY = 'jhg_token';
@@ -602,14 +632,12 @@
     if (isPiket && $('optPengganti')) $('optPengganti').style.display = 'block';
     else if ($('optPengganti')) $('optPengganti').style.display = 'none';
 
-    // LOGIKA BARU: KELAS vs BENGKEL
+    // LOGIKA KELAS vs BENGKEL
     if (state.targetLokasi) {
-      // Skenario Bengkel
       if ($('boxKelasNormal')) $('boxKelasNormal').classList.add('d-none');
       if ($('boxKelasBengkel')) $('boxKelasBengkel').classList.remove('d-none');
       if ($('jLokasi')) $('jLokasi').value = state.targetLokasi;
     } else if (state.targetKelas) {
-      // Skenario Ruang Kelas
       if ($('boxKelasNormal')) $('boxKelasNormal').classList.remove('d-none');
       if ($('boxKelasBengkel')) $('boxKelasBengkel').classList.add('d-none');
       if ($('jLokasi')) $('jLokasi').value = 'Ruang Kelas';
@@ -621,7 +649,6 @@
     }
 
     if ($('jMapel')) $('jMapel').innerHTML = '<option value="">Memuat data…</option>';
-    
     if (state.targetLokasi && $('jKelasSelect')) {
         $('jKelasSelect').innerHTML = '<option value="">Memuat Kelas…</option>';
     }
@@ -699,7 +726,7 @@
         tanggal: $('jTanggal').value,
         status_guru: $('jStatusGuru').value,
         guru_utama_id: $('jGuruUtama').value,
-        class_id: classId, // <-- Ambil dari dropdown atau hidden input
+        class_id: classId,
         subject_id: $('jMapel').value,
         lokasi_pembelajaran: $('jLokasi').value,
         jam_mulai: $('jJamMulai').value,
@@ -924,7 +951,6 @@
         var guruTxt = j.guru;
         if (j.guru_utama) guruTxt += ' <br><small class="text-danger">(Pengganti dari ' + j.guru_utama + ')</small>';
         
-        // KETERANGAN KHUSUS: Hanya berisi lokasi
         var ket = j.lokasi || 'Ruang Kelas';
         
         var tglClean = '-';
@@ -949,7 +975,7 @@
           '<td class="text-center">' + j.sakit + '</td>' +
           '<td class="text-center">' + j.izin + '</td>' +
           '<td class="text-center">' + j.alpa + '</td>' +
-          '<td>' + ket + '</td>' + // <-- Hanya berisi Lokasi
+          '<td>' + ket + '</td>' +
         '</tr>';
       });
     }).catch(function (err) { alert('Error Laporan: ' + err.message); });
