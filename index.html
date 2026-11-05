@@ -712,13 +712,19 @@
     $('jHadir').value = h < 0 ? 0 : h;
   };
 
-  document.addEventListener('submit', function (e) {
+    document.addEventListener('submit', function (e) {
     if (e.target && e.target.id === 'formJurnal') {
       e.preventDefault();
       
+      // --- VALIDASI MANUAL ---
       var classId = state.targetLokasi ? $('jKelasSelect').value : $('jKelas').value;
-      if (!classId) return alert('Silakan pilih kelas terlebih dahulu!');
-      
+      if (!classId) return alert('⚠️ Kelas belum dipilih!');
+      if (!$('jMapel').value) return alert('⚠️ Mata Pelajaran belum dipilih!');
+      if (!$('jJamMulai').value) return alert('⚠️ Jam Mulai belum dipilih!');
+      if (!$('jJamSelesai').value) return alert('⚠️ Jam Selesai belum dipilih!');
+      if (!$('jTopik').value || $('jTopik').value.trim().length < 3) return alert('⚠️ Topik pembelajaran minimal 3 karakter!');
+      // -----------------------
+
       var btn = $('btnSimpan');
       btn.disabled = true; btn.textContent = 'Menyimpan...';
       
