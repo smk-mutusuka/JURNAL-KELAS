@@ -48,20 +48,20 @@
           </div>
 
           <form id="form-login">
-  <div class="mb-3">
-    <label class="form-label fw-bold">Nama Guru</label>
-    <select id="namaGuru" class="form-select" required>
-      <option value="">-- Memuat data… --</option>
-    </select>
-    <div class="form-text small">Pilih nama Anda dari daftar.</div>
-  </div>
-  <div class="mb-4">
-    <label class="form-label fw-bold">PIN / Kode</label>
-    <input id="pin" type="password" class="form-control" placeholder="••••••" required autocomplete="current-password">
-    <div class="form-text small">Default: 6 huruf pertama nama Anda (huruf kecil, tanpa spasi).</div>
-  </div>
-  <button type="submit" id="btn-login" class="btn btn-primary w-100 fw-bold">Masuk Aplikasi</button>
-</form>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Nama Guru</label>
+              <select id="namaGuru" class="form-select" required>
+                <option value="">-- Memuat data… --</option>
+              </select>
+              <div class="form-text small">Pilih nama Anda dari daftar.</div>
+            </div>
+            <div class="mb-4">
+              <label class="form-label fw-bold">PIN / Kode</label>
+              <input id="pin" type="password" class="form-control" placeholder="••••••" required autocomplete="current-password">
+              <div class="form-text small">Default: 6 huruf pertama nama Anda (huruf kecil, tanpa spasi).</div>
+            </div>
+            <button type="submit" id="btn-login" class="btn btn-primary w-100 fw-bold">Masuk Aplikasi</button>
+          </form>
           <div id="login-message" class="mt-3 text-center small"></div>
         </div>
       </div>
@@ -369,7 +369,7 @@
 (function () {
   'use strict';
 
-  // ⚠️ GANTI dengan URL /exec GAS Anda (yang aktif)
+  // ⚠️ PASTIKAN URL DI BAWAH INI ADALAH URL /exec GAS ANDA YANG AKTIF
   const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyR93WUooPuW468-Rto5AMne17uvXw5XjzECPB5J1_4xrOjHTAVMr5AfFLSExnEX3F8/exec';
 
   var TOKEN_KEY = 'jhg_token';
@@ -409,7 +409,6 @@
   window.navigateTo = function (page) {
     var tpl = document.getElementById('tpl-' + page) || document.getElementById('tpl-dashboard');
     var mc = $('main-content');
-    if (!mc) { mc = document.getElementById('main-content'); }
     if (!mc) return;
     mc.innerHTML = tpl.innerHTML;
 
@@ -487,34 +486,50 @@
 
   function renderDashboard(user) {
     show('view-dashboard');
+    // JIKA ADA PARAMETER KELAS DI URL (HASIL SCAN QR), LANGSUNG KE FORM JURNAL
     if (state.targetKelas) navigateTo('form-jurnal');
     else navigateTo('dashboard');
   }
 
   // ============= LOGIN =============
   document.addEventListener('submit', function (e) {
-  if (e.target && e.target.id === 'form-login') {
-    e.preventDefault();
-    var userId = $('namaGuru').value;
-    var pin = $('pin').value.trim();
-    if (!userId || !pin) return;
+    if (e.target && e.target.id === 'form-login') {
+      e.preventDefault();
+      var userId = $('namaGuru').value;
+      var pin = $('pin').value.trim();
+      if (!userId || !pin) return;
 
-    $('btn-login').disabled = true;
-    $('btn-login').textContent = 'Memproses...';
+      $('btn-login').disabled = true;
+      $('btn-login').textContent = 'Memproses...';
 
-    callApi('api_login', null, { user_id: userId, pin: pin }).then(function (data) {
-      state.token = data.token;
-      state.user = data.user;
-      localStorage.setItem(TOKEN_KEY, data.token);
-      $('pin').value = '';
-      renderDashboard(data.user);   // ← otomatis ke form-jurnal kalau ada ?kelas=
+      callApi('api_login', null, { user_id: userId, pin: pin }).then(function (data) {
+        state.token = data.token;
+        state.user = data.user;
+        localStorage.setItem(TOKEN_KEY, data.token);
+        $('pin').value = '';
+        renderDashboard(data.user);
+      }).catch(function (err) {
+        $('login-message').innerHTML = '<span class="text-danger">' + err.message + '</span>';
+        $('btn-login').disabled = false;
+        $('btn-login').textContent = 'Masuk Aplikasi';
+      });
+    }
+  });
+
+  function loadTeachers() {
+    callApi('api_getTeachers').then(function (teachers) {
+      var sel = $('namaGuru');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">-- Pilih Nama Anda --</option>';
+      (teachers || []).forEach(function (t) {
+        sel.innerHTML += '<option value="' + t.user_id + '">' + t.nama_guru + '</option>';
+      });
     }).catch(function (err) {
-      $('login-message').innerHTML = '<span class="text-danger">' + err.message + '</span>';
-      $('btn-login').disabled = false;
-      $('btn-login').textContent = 'Masuk Aplikasi';
+      console.error('Load teachers failed:', err);
+      var sel = $('namaGuru');
+      if (sel) sel.innerHTML = '<option value="">(Gagal memuat daftar guru)</option>';
     });
   }
-});
 
   // ============= FORM JURNAL =============
   function initFormJurnal() {
@@ -861,51 +876,37 @@
 
   // ============= BOOT =============
   function boot() {
-  state.token = localStorage.getItem(TOKEN_KEY);
-  if ($('schoolName')) $('schoolName').textContent = 'SMK Muhammadiyah 1 Surakarta';
+    state.token = localStorage.getItem(TOKEN_KEY);
+    if ($('schoolName')) $('schoolName').textContent = 'SMK Muhammadiyah 1 Surakarta';
 
-  // Tidak baca token dari URL lagi (QR tidak lagi bawa token)
-  if (!state.token) {
-    show('view-login');
-    loadTeachers();
-    if (state.targetKelas && $('warning-box')) {
-      $('warning-box').classList.remove('d-none');
-      $('warning-text').innerHTML = '🔒 Login untuk mengisi jurnal kelas <b>' + state.targetKelas + '</b>.';
+    if (!state.token) {
+      show('view-login');
+      loadTeachers(); // Memuat dropdown guru
+      if (state.targetKelas && $('warning-box')) {
+        $('warning-box').classList.remove('d-none');
+        $('warning-text').innerHTML = '🔒 Login untuk mengisi jurnal kelas <b>' + state.targetKelas + '</b>.';
+      }
+      return;
     }
-    return;
+
+    callApi('api_getCurrentUser', state.token).then(function (data) {
+      state.user = data.user;
+      state.config = data.config || state.config;
+      renderDashboard(data.user);
+    }).catch(function () {
+      localStorage.removeItem(TOKEN_KEY);
+      state.token = null;
+      show('view-login');
+      loadTeachers();
+      if (state.targetKelas && $('warning-box')) {
+        $('warning-box').classList.remove('d-none');
+        $('warning-text').innerHTML = '🔒 Login untuk mengisi jurnal kelas <b>' + state.targetKelas + '</b>.';
+      }
+    });
   }
 
-  callApi('api_getCurrentUser', state.token).then(function (data) {
-    state.user = data.user;
-    state.config = data.config || state.config;
-    renderDashboard(data.user);
-  }).catch(function () {
-    localStorage.removeItem(TOKEN_KEY);
-    state.token = null;
-    show('view-login');
-    loadTeachers();
-    if (state.targetKelas && $('warning-box')) {
-      $('warning-box').classList.remove('d-none');
-      $('warning-text').innerHTML = '🔒 Login untuk mengisi jurnal kelas <b>' + state.targetKelas + '</b>.';
-    }
-  });
-}
-
-  function loadTeachers() {
-  callApi('api_getTeachers').then(function (teachers) {
-    var sel = $('namaGuru');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">-- Pilih Nama Anda --</option>';
-    (teachers || []).forEach(function (t) {
-      sel.innerHTML += '<option value="' + t.user_id + '">' + t.nama_guru + '</option>';
-    });
-  }).catch(function (err) {
-    console.error('Load teachers failed:', err);
-    var sel = $('namaGuru');
-    if (sel) sel.innerHTML = '<option value="">(Gagal memuat daftar guru)</option>';
-  });
-}
-  
+  document.addEventListener('DOMContentLoaded', boot);
+})();
 </script>
 </body>
 </html>
