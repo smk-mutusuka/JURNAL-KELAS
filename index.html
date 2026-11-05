@@ -875,9 +875,16 @@
         if (j.guru_utama) guruTxt += ' <br><small class="text-danger">(Pengganti dari ' + j.guru_utama + ')</small>';
         var ket = (j.kejadian && j.kejadian !== '-') ? j.kejadian : '';
         
-        var tglStr = j.tanggal ? String(j.tanggal).split('T')[0] : '';
-        var tglParts = tglStr.split('-');
-        var tglClean = tglParts.length === 3 ? (tglParts[2] + '-' + tglParts[1] + '-' + tglParts[0]) : tglStr;
+        // FIX TIMEZONE: Konversi string UTC ke tanggal lokal
+        var tglClean = '-';
+        if (j.tanggal) {
+          var d = new Date(j.tanggal);
+          if (!isNaN(d.getTime())) {
+            tglClean = d.getDate().toString().padStart(2, '0') + '-' + (d.getMonth()+1).toString().padStart(2, '0') + '-' + d.getFullYear();
+          } else {
+            tglClean = String(j.tanggal).split('T')[0];
+          }
+        }
 
         tb.innerHTML += '<tr>' +
           '<td class="text-center">' + (idx + 1) + '</td>' +
@@ -915,9 +922,16 @@
         return;
       }
       res.data.forEach(function (j, idx) {
-        var tglStr = j.tanggal ? String(j.tanggal).split('T')[0] : '';
-        var tglParts = tglStr.split('-');
-        var tglClean = tglParts.length === 3 ? (tglParts[2] + '-' + tglParts[1] + '-' + tglParts[0]) : tglStr;
+        // FIX TIMEZONE: Konversi string UTC ke tanggal lokal
+        var tglClean = '-';
+        if (j.tanggal) {
+          var d = new Date(j.tanggal);
+          if (!isNaN(d.getTime())) {
+            tglClean = d.getDate().toString().padStart(2, '0') + '-' + (d.getMonth()+1).toString().padStart(2, '0') + '-' + d.getFullYear();
+          } else {
+            tglClean = String(j.tanggal).split('T')[0];
+          }
+        }
 
         var badge = j.status === 'pengganti'
           ? '<span class="badge bg-warning text-dark">Pengganti (dari ' + (j.guru_utama || '-') + ')</span>'
