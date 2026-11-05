@@ -147,15 +147,27 @@
       <div class="card-body">
         <form id="formJurnal">
           <div class="row g-3">
-            <div class="col-md-6">
+            <div class="col-md-4">
               <label class="form-label fw-bold">Tanggal</label>
               <input type="date" class="form-control" id="jTanggal" required>
             </div>
-            <div class="col-md-6">
+            
+            <!-- Pilihan Kelas (Readonly untuk Kelas, Dropdown untuk Bengkel) -->
+            <div class="col-md-4" id="boxKelasNormal">
               <label class="form-label fw-bold">Kelas</label>
               <input type="text" class="form-control" id="jNamaKelas" readonly>
               <input type="hidden" id="jKelas">
             </div>
+            <div class="col-md-4 d-none" id="boxKelasBengkel">
+              <label class="form-label fw-bold">Pilih Kelas</label>
+              <select class="form-select" id="jKelasSelect" required></select>
+            </div>
+            
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Lokasi</label>
+              <input type="text" class="form-control" id="jLokasi" readonly>
+            </div>
+
             <div class="col-md-6">
               <label class="form-label fw-bold">Status Guru</label>
               <select class="form-select" id="jStatusGuru" onchange="toggleGuruPengganti()">
@@ -244,6 +256,7 @@
               <th style="width:30px">No</th>
               <th style="width:80px">Tanggal</th>
               <th style="width:70px">Kelas</th>
+              <th style="width:100px">Lokasi</th>
               <th style="width:80px">Jam</th>
               <th>Mapel</th>
               <th>Topik</th>
@@ -255,7 +268,7 @@
             </tr>
           </thead>
           <tbody id="tbody-riwayat">
-            <tr><td colspan="11" class="text-center text-muted">Memuat…</td></tr>
+            <tr><td colspan="12" class="text-center text-muted">Memuat…</td></tr>
           </tbody>
         </table>
       </div>
@@ -341,6 +354,7 @@
       <div class="table-responsive">
         <table class="table table-bordered table-sm" style="font-size:12px">
           <thead class="table-light text-center">
+            <!-- Kolom Lokasi Dihapus -->
             <tr><th style="width:30px">No</th><th style="width:80px">Tanggal</th><th style="width:70px">Kelas</th><th style="width:80px">Jam</th><th>Mapel</th><th>Guru Pengisi</th><th>Topik</th><th style="width:40px">Hadir</th><th style="width:25px">S</th><th style="width:25px">I</th><th style="width:25px">A</th><th>Keterangan</th></tr>
           </thead>
           <tbody id="tbody-reports"><tr><td colspan="12" class="text-center text-muted">Belum ada data.</td></tr></tbody>
@@ -417,9 +431,12 @@
 
   var TOKEN_KEY = 'jhg_token';
   var $ = function (id) { return document.getElementById(id); };
+  
   var urlParams = new URLSearchParams(window.location.search);
   var urlKelas = (urlParams.get('kelas') || '').toUpperCase();
-  var state = { token: null, user: null, config: {}, masterData: null, adminData: null, targetKelas: urlKelas };
+  var urlLokasi = (urlParams.get('lokasi') || '').trim();
+  
+  var state = { token: null, user: null, config: {}, masterData: null, adminData: null, targetKelas: urlKelas, targetLokasi: urlLokasi };
 
   // ============= API CALL =============
   async function callApi(action, token, data) {
@@ -461,7 +478,9 @@
       var pRole = document.getElementById('dashRole');
       if (h4) {
         var bannerTitle = 'Selamat Datang,';
-        if (state.targetKelas) {
+        if (state.targetLokasi) {
+           bannerTitle = 'Selamat Datang di ' + state.targetLokasi;
+        } else if (state.targetKelas) {
           var match = state.masterData ? state.masterData.classes.find(c => c.class_id === state.targetKelas) : null;
           var namaKelas = match ? match.nama_kelas : state.targetKelas;
           bannerTitle = 'Selamat Datang di Kelas ' + namaKelas;
@@ -529,7 +548,7 @@
 
   function renderDashboard(user) {
     show('view-dashboard');
-    if (state.targetKelas) navigateTo('form-jurnal');
+    if (state.targetKelas || state.targetLokasi) navigateTo('form-jurnal');
     else navigateTo('dashboard');
   }
 
@@ -583,24 +602,49 @@
     if (isPiket && $('optPengganti')) $('optPengganti').style.display = 'block';
     else if ($('optPengganti')) $('optPengganti').style.display = 'none';
 
-    if (!state.targetKelas) {
-      alert('⚠️ Anda tidak membuka aplikasi dari QR Code kelas.\n\nSilakan scan QR Code di pintu kelas untuk mengisi jurnal.');
+    // LOGIKA BARU: KELAS vs BENGKEL
+    if (state.targetLokasi) {
+      // Skenario Bengkel
+      if ($('boxKelasNormal')) $('boxKelasNormal').classList.add('d-none');
+      if ($('boxKelasBengkel')) $('boxKelasBengkel').classList.remove('d-none');
+      if ($('jLokasi')) $('jLokasi').value = state.targetLokasi;
+    } else if (state.targetKelas) {
+      // Skenario Ruang Kelas
+      if ($('boxKelasNormal')) $('boxKelasNormal').classList.remove('d-none');
+      if ($('boxKelasBengkel')) $('boxKelasBengkel').classList.add('d-none');
+      if ($('jLokasi')) $('jLokasi').value = 'Ruang Kelas';
+      if ($('jKelas')) $('jKelas').value = state.targetKelas;
+    } else {
+      alert('⚠️ Anda tidak membuka aplikasi dari QR Code kelas/bengkel.\n\nSilakan scan QR Code untuk mengisi jurnal.');
       navigateTo('dashboard');
       return;
     }
 
     if ($('jMapel')) $('jMapel').innerHTML = '<option value="">Memuat data…</option>';
+    
+    if (state.targetLokasi && $('jKelasSelect')) {
+        $('jKelasSelect').innerHTML = '<option value="">Memuat Kelas…</option>';
+    }
 
     callApi('api_getFormMasterData', state.token).then(function (data) {
       state.masterData = data;
-      var kelas = data.classes.find(c => String(c.class_id).trim() === String(state.targetKelas).trim());
-      if (kelas) {
-        if ($('jNamaKelas')) $('jNamaKelas').value = kelas.nama_kelas;
-        if ($('jKelas')) $('jKelas').value = kelas.class_id;
-        if ($('jSiswa')) $('jSiswa').value = kelas.jumlah_siswa || 36;
-        if (typeof window.hitungHadir === 'function') window.hitungHadir();
-      } else if ($('jNamaKelas')) {
-        $('jNamaKelas').value = 'Kelas tidak ditemukan: ' + state.targetKelas;
+      
+      if (state.targetKelas) {
+        var kelas = data.classes.find(c => String(c.class_id).trim() === String(state.targetKelas).trim());
+        if (kelas) {
+          if ($('jNamaKelas')) $('jNamaKelas').value = kelas.nama_kelas;
+          if ($('jSiswa')) $('jSiswa').value = kelas.jumlah_siswa || 36;
+          if (typeof window.hitungHadir === 'function') window.hitungHadir();
+        } else if ($('jNamaKelas')) {
+          $('jNamaKelas').value = 'Kelas tidak ditemukan: ' + state.targetKelas;
+        }
+      }
+
+      if (state.targetLokasi && $('jKelasSelect')) {
+          $('jKelasSelect').innerHTML = '<option value="">-- Pilih Kelas --</option>';
+          (data.classes || []).forEach(function(c) {
+              $('jKelasSelect').innerHTML += '<option value="' + c.class_id + '">' + c.nama_kelas + '</option>';
+          });
       }
 
       var selMapel = $('jMapel');
@@ -644,14 +688,20 @@
   document.addEventListener('submit', function (e) {
     if (e.target && e.target.id === 'formJurnal') {
       e.preventDefault();
+      
+      var classId = state.targetLokasi ? $('jKelasSelect').value : $('jKelas').value;
+      if (!classId) return alert('Silakan pilih kelas terlebih dahulu!');
+      
       var btn = $('btnSimpan');
       btn.disabled = true; btn.textContent = 'Menyimpan...';
+      
       var payload = {
         tanggal: $('jTanggal').value,
         status_guru: $('jStatusGuru').value,
         guru_utama_id: $('jGuruUtama').value,
-        class_id: $('jKelas').value,
+        class_id: classId, // <-- Ambil dari dropdown atau hidden input
         subject_id: $('jMapel').value,
+        lokasi_pembelajaran: $('jLokasi').value,
         jam_mulai: $('jJamMulai').value,
         jam_selesai: $('jJamSelesai').value,
         topik: $('jTopik').value,
@@ -663,7 +713,7 @@
       };
       callApi('api_saveJournal', state.token, payload).then(function (res) {
         alert('✅ ' + res.message);
-        if (state.targetKelas) {
+        if (state.targetKelas || state.targetLokasi) {
           initFormJurnal();
           btn.disabled = false; btn.textContent = 'Simpan Jurnal';
         } else {
@@ -873,9 +923,10 @@
       res.data.forEach(function (j, idx) {
         var guruTxt = j.guru;
         if (j.guru_utama) guruTxt += ' <br><small class="text-danger">(Pengganti dari ' + j.guru_utama + ')</small>';
-        var ket = (j.kejadian && j.kejadian !== '-') ? j.kejadian : '';
         
-        // FIX TIMEZONE: Konversi string UTC ke tanggal lokal
+        // KETERANGAN KHUSUS: Hanya berisi lokasi
+        var ket = j.lokasi || 'Ruang Kelas';
+        
         var tglClean = '-';
         if (j.tanggal) {
           var d = new Date(j.tanggal);
@@ -898,7 +949,7 @@
           '<td class="text-center">' + j.sakit + '</td>' +
           '<td class="text-center">' + j.izin + '</td>' +
           '<td class="text-center">' + j.alpa + '</td>' +
-          '<td>' + ket + '</td>' +
+          '<td>' + ket + '</td>' + // <-- Hanya berisi Lokasi
         '</tr>';
       });
     }).catch(function (err) { alert('Error Laporan: ' + err.message); });
@@ -909,7 +960,6 @@
     var today = new Date();
     if ($('tglCetakRiwayat')) $('tglCetakRiwayat').textContent = today.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     
-    // Ambil nama dan NBM dari state user
     if ($('ttdNamaGuru')) $('ttdNamaGuru').textContent = state.user.nama_guru;
     if ($('ttdNbmGuru')) $('ttdNbmGuru').textContent = state.user.nbm_guru || '.........................';
 
@@ -918,11 +968,10 @@
     callApi('api_getMyJournals', state.token).then(function (res) {
       tb.innerHTML = '';
       if (!res.data || res.data.length === 0) {
-        tb.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-3">Belum ada jurnal yang pernah Anda isi.</td></tr>';
+        tb.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-3">Belum ada jurnal yang pernah Anda isi.</td></tr>';
         return;
       }
       res.data.forEach(function (j, idx) {
-        // FIX TIMEZONE: Konversi string UTC ke tanggal lokal
         var tglClean = '-';
         if (j.tanggal) {
           var d = new Date(j.tanggal);
@@ -941,6 +990,7 @@
           '<td class="text-center">' + (idx + 1) + '</td>' +
           '<td class="text-center">' + tglClean + '</td>' +
           '<td class="text-center fw-bold">' + j.nama_kelas + '</td>' +
+          '<td class="text-center">' + (j.lokasi || '-') + '</td>' +
           '<td class="text-center">' + j.jam + '</td>' +
           '<td>' + j.mapel + '</td>' +
           '<td>' + j.topik + '</td>' +
@@ -952,7 +1002,7 @@
         '</tr>';
       });
     }).catch(function (err) {
-      tb.innerHTML = '<tr><td colspan="11" class="text-center text-danger py-3">Gagal memuat riwayat: ' + err.message + '</td></tr>';
+      tb.innerHTML = '<tr><td colspan="12" class="text-center text-danger py-3">Gagal memuat riwayat: ' + err.message + '</td></tr>';
     });
   }
 
@@ -964,9 +1014,10 @@
     if (!state.token) {
       show('view-login');
       loadTeachers();
-      if (state.targetKelas && $('warning-box')) {
+      if ((state.targetKelas || state.targetLokasi) && $('warning-box')) {
         $('warning-box').classList.remove('d-none');
-        $('warning-text').innerHTML = '🔒 Login untuk mengisi jurnal kelas <b>' + state.targetKelas + '</b>.';
+        var tempat = state.targetLokasi ? state.targetLokasi : 'Kelas ' + state.targetKelas;
+        $('warning-text').innerHTML = '🔒 Login untuk mengisi jurnal di <b>' + tempat + '</b>.';
       }
       return;
     }
@@ -980,9 +1031,10 @@
       state.token = null;
       show('view-login');
       loadTeachers();
-      if (state.targetKelas && $('warning-box')) {
+      if ((state.targetKelas || state.targetLokasi) && $('warning-box')) {
         $('warning-box').classList.remove('d-none');
-        $('warning-text').innerHTML = '🔒 Login untuk mengisi jurnal kelas <b>' + state.targetKelas + '</b>.';
+        var tempat = state.targetLokasi ? state.targetLokasi : 'Kelas ' + state.targetKelas;
+        $('warning-text').innerHTML = '🔒 Login untuk mengisi jurnal di <b>' + tempat + '</b>.';
       }
     });
   }
