@@ -1,212 +1,897 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Jurnal Harian Guru</title>
+  <title>Jurnal Harian Guru — SMK Muhammadiyah 1 Surakarta</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <?!= include('Styles') ?>
+  <style>
+    .view{display:none} .view.active{display:block}
+    .hover-card{transition:transform .2s,box-shadow .2s;cursor:pointer}
+    .hover-card:hover{transform:translateY(-5px);box-shadow:0 .5rem 1rem rgba(0,0,0,.15)!important}
+    #main-content{min-height:calc(100vh - 56px)}
+    @media print{
+      body{background:#fff!important}
+      .d-print-none,.offcanvas,.navbar{display:none!important}
+      #main-content{margin:0!important;padding:0!important}
+      .container{max-width:100%!important;width:100%!important;margin:0!important}
+      #print-area{box-shadow:none!important;border:none!important;padding:0!important}
+      table{width:100%!important;border-collapse:collapse!important}
+      th,td{border:1px solid #000!important;padding:4px!important}
+      @page{size:A4 landscape;margin:1cm}
+    }
+  </style>
 </head>
 <body class="bg-light">
-  <div id="app">
-    
-    <!-- LOADING & LOGIN -->
-    <div id="view-loading" class="view active">
-      <div class="d-flex justify-content-center align-items-center vh-100">
-        <div class="text-center">
-          <div class="spinner-border text-primary" role="status"></div>
-          <p class="mt-3 text-muted">Memuat aplikasi…</p>
-        </div>
-      </div>
-    </div>
+<div id="app">
 
-    <div id="view-login" class="view">
-      <div class="d-flex justify-content-center align-items-center vh-100">
-        <div class="card shadow border-0" style="width: 100%; max-width: 400px;">
-          <div class="card-body p-4">
-            <h3 class="fw-bold text-primary mb-1 text-center">Jurnal Harian Guru</h3>
-            <p class="text-muted text-center small mb-4" id="schoolName"></p>
-            <form id="form-login">
-              <div class="mb-3">
-                <label class="form-label fw-bold">Nama Guru</label>
-                <select id="namaGuru" class="form-select" required>
-                  <option value="">-- Pilih Nama Anda --</option>
-                </select>
-              </div>
-              <div class="mb-4">
-                <label class="form-label fw-bold">PIN / Kode</label>
-                <input id="pin" type="password" class="form-control" placeholder="••••••" required>
-              </div>
-              <button type="submit" id="btn-login" class="btn btn-primary w-100 fw-bold">Masuk Aplikasi</button>
-            </form>
-            <div id="login-message" class="mt-3 text-center small"></div>
-          </div>
-        </div>
+  <!-- ============ LOADING ============ -->
+  <div id="view-loading" class="view active">
+    <div class="d-flex justify-content-center align-items-center vh-100">
+      <div class="text-center">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-3 text-muted">Memuat aplikasi…</p>
       </div>
-    </div>
-
-    <!-- DASHBOARD & SIDEBAR -->
-    <div id="view-dashboard" class="view">
-      <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu" style="width: 280px;">
-        <div class="offcanvas-header bg-primary text-white">
-          <h5 class="offcanvas-title fw-bold">Menu Navigasi</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
-        </div>
-        <div class="offcanvas-body p-0">
-          <div class="list-group list-group-flush">
-            <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 fw-bold" onclick="navigateTo('dashboard'); closeSidebar();">🏠 Dashboard</a>
-            <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 d-none" id="menu-laporan" onclick="navigateTo('laporan'); closeSidebar();">📊 Laporan & Cetak</a>
-            <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 d-none" id="menu-admin" onclick="navigateTo('admin'); closeSidebar();">⚙️ Data Master (Admin)</a>
-          </div>
-        </div>
-      </div>
-      <div id="main-content" class="pt-3 pb-5"></div>
     </div>
   </div>
 
-  <!-- TEMPLATE HALAMAN -->
-  <div id="tpl-dashboard" style="display: none;"><?!= include('Dashboard') ?></div>
-  <div id="tpl-form-jurnal" style="display: none;"><?!= include('JournalForm') ?></div>
-  <div id="tpl-riwayat" style="display: none;"><?!= include('JournalHistory') ?></div>
+  <!-- ============ LOGIN ============ -->
+  <div id="view-login" class="view">
+    <div class="d-flex justify-content-center align-items-center vh-100">
+      <div class="card shadow border-0" style="width:100%;max-width:420px">
+        <div class="card-body p-4">
+          <h3 class="fw-bold text-primary mb-1 text-center">Jurnal Harian Guru</h3>
+          <p class="text-muted text-center small mb-4" id="schoolName"></p>
 
-  <!-- TEMPLATE ADMIN -->
-  <div id="tpl-admin" style="display: none;">
-    <div class="container py-4">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="fw-bold m-0">⚙️ Manajemen Data Master</h4>
-        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="navigateTo('dashboard')">Kembali</button>
-      </div>
-      
-      <ul class="nav nav-tabs mb-3" id="adminTabs" role="tablist">
-        <li class="nav-item" role="presentation"><button type="button" class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tab-guru">Data Guru</button></li>
-        <li class="nav-item" role="presentation"><button type="button" class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-kelas">Data Kelas</button></li>
-        <li class="nav-item" role="presentation"><button type="button" class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-mapel">Data Mapel</button></li>
-      </ul>
-      
-      <div class="tab-content card shadow-sm border-0 p-3" id="adminTabsContent">
-        <!-- TAB GURU -->
-        <div class="tab-pane fade show active" id="tab-guru">
-          <button type="button" class="btn btn-success btn-sm mb-3 fw-bold" onclick="openUserModal()">+ Tambah Guru</button>
-          <div class="table-responsive"><table class="table table-hover align-middle">
-            <thead class="table-light"><tr><th>Nama Guru</th><th>Email</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead>
-            <tbody id="tbody-guru"></tbody>
-          </table></div>
-        </div>
-        <!-- TAB KELAS -->
-        <div class="tab-pane fade" id="tab-kelas">
-          <button type="button" class="btn btn-success btn-sm mb-3 fw-bold" onclick="openClassModal()">+ Tambah Kelas</button>
-          <div class="table-responsive"><table class="table table-hover align-middle">
-            <thead class="table-light"><tr><th>Nama Kelas</th><th>Tingkat</th><th>Konsentrasi</th><th>Jml Siswa</th><th>Aksi</th></tr></thead>
-            <tbody id="tbody-kelas"></tbody>
-          </table></div>
-        </div>
-        <!-- TAB MAPEL -->
-        <div class="tab-pane fade" id="tab-mapel">
-          <button type="button" class="btn btn-success btn-sm mb-3 fw-bold" onclick="openSubjectModal()">+ Tambah Mapel</button>
-          <div class="table-responsive"><table class="table table-hover align-middle">
-            <thead class="table-light"><tr><th>Nama Mata Pelajaran</th><th>Status</th><th>Aksi</th></tr></thead>
-            <tbody id="tbody-mapel"></tbody>
-          </table></div>
+          <div id="warning-box" class="alert alert-warning d-none">
+            <small id="warning-text"></small>
+          </div>
+
+          <form id="form-login">
+            <div class="mb-3">
+              <label class="form-label fw-bold">Email Guru</label>
+              <input id="emailGuru" type="email" class="form-control" placeholder="nama@gmail.com" required autocomplete="username">
+              <div class="form-text small">Gunakan email yang terdaftar di sekolah.</div>
+            </div>
+            <div class="mb-4">
+              <label class="form-label fw-bold">PIN / Kode</label>
+              <input id="pin" type="password" class="form-control" placeholder="••••••" required autocomplete="current-password">
+              <div class="form-text small">Default: 6 huruf pertama nama (huruf kecil, tanpa spasi).</div>
+            </div>
+            <button type="submit" id="btn-login" class="btn btn-primary w-100 fw-bold">Masuk Aplikasi</button>
+          </form>
+          <div id="login-message" class="mt-3 text-center small"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- TEMPLATE LAPORAN -->
-  <div id="tpl-laporan" style="display: none;">
-    <div class="container py-4">
-      <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
-        <h4 class="fw-bold m-0">📊 Laporan Jurnal</h4>
-        <div>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="navigateTo('dashboard')">Kembali</button>
-          <button type="button" class="btn btn-success fw-bold btn-sm" onclick="window.print()">🖨️ Cetak Laporan</button>
+  <!-- ============ DASHBOARD (shell) ============ -->
+  <div id="view-dashboard" class="view">
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu" style="width:280px">
+      <div class="offcanvas-header bg-primary text-white">
+        <h5 class="offcanvas-title fw-bold">Menu Navigasi</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+      </div>
+      <div class="offcanvas-body p-0">
+        <div class="list-group list-group-flush">
+          <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 fw-bold" onclick="navigateTo('dashboard');closeSidebar();">🏠 Dashboard</a>
+          <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 fw-bold" onclick="navigateTo('riwayat');closeSidebar();">📚 Riwayat Saya</a>
+          <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 d-none" id="menu-laporan" onclick="navigateTo('laporan');closeSidebar();">📊 Laporan & Cetak</a>
+          <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 d-none" id="menu-admin" onclick="navigateTo('admin');closeSidebar();">⚙️ Data Master (Admin)</a>
         </div>
       </div>
-      <div class="card shadow-sm border-0 mb-4 d-print-none">
-        <div class="card-body">
-          <div class="row g-3 align-items-end">
-            <div class="col-md-3"><label class="form-label">Dari Tanggal</label><input type="date" class="form-control" id="repTglMulai"></div>
-            <div class="col-md-3"><label class="form-label">Sampai Tanggal</label><input type="date" class="form-control" id="repTglSelesai"></div>
-            <div class="col-md-3"><label class="form-label">Kelas</label><select class="form-select" id="repKelas"><option value="">Semua Kelas</option></select></div>
-            <div class="col-md-3"><button type="button" class="btn btn-primary w-100 fw-bold" onclick="loadReports()">Tampilkan Data</button></div>
+    </div>
+
+    <nav class="navbar navbar-light bg-white border-bottom d-print-none">
+      <div class="container-fluid">
+        <button class="btn btn-outline-primary d-none" id="btn-sidebar" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">☰ Menu</button>
+        <span class="navbar-brand fw-bold text-primary ms-2">Jurnal Harian</span>
+      </div>
+    </nav>
+    <div id="main-content" class="pt-3 pb-5"></div>
+  </div>
+</div>
+
+<!-- ================= TEMPLATES ================= -->
+<div id="tpl-dashboard" style="display:none">
+  <div class="container">
+    <div class="card shadow-sm border-0 mb-4 bg-primary text-white">
+      <div class="card-body">
+        <h4 class="fw-bold mb-1">Selamat Datang,</h4>
+        <h2 id="dashNamaGuru" class="mb-1"></h2>
+        <p id="dashRole" class="mb-0 small opacity-75"></p>
+      </div>
+    </div>
+    <div class="row g-3">
+      <div class="col-6 col-md-4">
+        <div class="card hover-card shadow-sm border-0" onclick="navigateTo('form-jurnal')">
+          <div class="card-body text-center py-4">
+            <div style="font-size:2.5rem">📝</div>
+            <h6 class="fw-bold mt-2 mb-0">Isi Jurnal</h6>
           </div>
         </div>
       </div>
-      <div id="print-area" class="bg-white p-4 shadow-sm border-0">
-        <div class="text-center mb-4">
-          <h3 class="fw-bold m-0">SMK MUHAMMADIYAH 1 SURAKARTA</h3>
-          <p class="m-0">Laporan Jurnal Harian Guru</p><hr>
+      <div class="col-6 col-md-4">
+        <div class="card hover-card shadow-sm border-0" onclick="navigateTo('riwayat')">
+          <div class="card-body text-center py-4">
+            <div style="font-size:2.5rem">📚</div>
+            <h6 class="fw-bold mt-2 mb-0">Riwayat Saya</h6>
+          </div>
         </div>
+      </div>
+      <div class="col-6 col-md-4">
+        <div class="card hover-card shadow-sm border-0 d-none" id="dash-card-laporan" onclick="navigateTo('laporan')">
+          <div class="card-body text-center py-4">
+            <div style="font-size:2.5rem">📊</div>
+            <h6 class="fw-bold mt-2 mb-0">Laporan</h6>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="text-center mt-4">
+      <button class="btn btn-outline-danger btn-sm" id="btn-logout">Logout</button>
+    </div>
+  </div>
+</div>
+
+<div id="tpl-form-jurnal" style="display:none">
+  <div class="container" style="max-width:720px">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="m-0 fw-bold">📝 Form Jurnal Mengajar</h5>
+        <button class="btn btn-sm btn-light" onclick="navigateTo('dashboard')">Kembali</button>
+      </div>
+      <div class="card-body">
+        <form id="formJurnal">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Tanggal</label>
+              <input type="date" class="form-control" id="jTanggal" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Kelas</label>
+              <input type="text" class="form-control" id="jNamaKelas" readonly>
+              <input type="hidden" id="jKelas">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Status Guru</label>
+              <select class="form-select" id="jStatusGuru" onchange="toggleGuruPengganti()">
+                <option value="utama">Guru Utama</option>
+                <option value="pengganti" id="optPengganti" style="display:none">Guru Pengganti</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Nama Pengisi</label>
+              <input type="text" class="form-control" id="jNamaPengisi" readonly>
+            </div>
+            <div class="col-12 d-none" id="boxGuruPengganti">
+              <label class="form-label fw-bold">Guru yang Digantikan</label>
+              <select class="form-select" id="jGuruUtama"><option value="">-- Pilih Guru --</option></select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Mata Pelajaran</label>
+              <select class="form-select" id="jMapel" required></select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-bold">Jam Mulai</label>
+              <input type="number" class="form-control" id="jJamMulai" min="1" max="12" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-bold">Jam Selesai</label>
+              <input type="number" class="form-control" id="jJamSelesai" min="1" max="12" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-bold">Topik Pembelajaran</label>
+              <input type="text" class="form-control" id="jTopik" required minlength="3" placeholder="Contoh: Pengenalan Dasar Pengelasan">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-bold">Jml Siswa</label>
+              <input type="number" class="form-control" id="jSiswa" value="36" onchange="hitungHadir()">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-bold">Hadir</label>
+              <input type="number" class="form-control" id="jHadir" readonly>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-bold">Sakit</label>
+              <input type="number" class="form-control" id="jSakit" value="0" onchange="hitungHadir()">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-bold">Izin</label>
+              <input type="number" class="form-control" id="jIzin" value="0" onchange="hitungHadir()">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-bold">Alpa</label>
+              <input type="number" class="form-control" id="jAlpa" value="0" onchange="hitungHadir()">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-bold">Kejadian Luar Biasa (Opsional)</label>
+              <textarea class="form-control" id="jKejadian" rows="2"></textarea>
+            </div>
+            <div class="col-12">
+              <button type="submit" id="btnSimpan" class="btn btn-primary w-100 fw-bold">Simpan Jurnal</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tpl-riwayat" style="display:none">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4 class="fw-bold m-0">📚 Riwayat Jurnal Saya</h4>
+      <button class="btn btn-outline-secondary btn-sm" onclick="navigateTo('dashboard')">Kembali</button>
+    </div>
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
         <div class="table-responsive">
-          <table class="table table-bordered table-sm text-sm" style="font-size: 12px;">
-            <thead class="table-light text-center">
-              <tr><th style="width: 30px;">No</th><th style="width: 80px;">Tanggal</th><th style="width: 70px;">Kelas</th><th style="width: 80px;">Jam</th><th>Mapel</th><th>Guru Pengisi</th><th>Topik</th><th style="width: 40px;">Hadir</th><th style="width: 25px;">S</th><th style="width: 25px;">I</th><th style="width: 25px;">A</th><th>Keterangan</th></tr>
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr><th>Tanggal</th><th>Kelas</th><th>Jam</th><th>Mapel</th><th>Topik</th><th class="text-center">S/I/A</th><th>Status</th></tr>
             </thead>
-            <tbody id="tbody-reports"><tr><td colspan="12" class="text-center text-muted">Belum ada data.</td></tr></tbody>
+            <tbody id="tbody-riwayat">
+              <tr><td colspan="7" class="text-center text-muted">Memuat…</td></tr>
+            </tbody>
           </table>
         </div>
-        <div class="mt-5 d-flex justify-content-between">
-          <div>Mengetahui,<br>Kepala Sekolah<br><br><br><br><u>Joko Harinto, S.Pd., M.Pd.</u></div>
-          <div>Surakarta, <span id="tglCetak"></span><br>Petugas Kurikulum<br><br><br><br><u>........................................</u></div>
-        </div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- ================= MODAL EDIT / TAMBAH ================= -->
-
-  <!-- Modal User -->
-  <div class="modal fade" id="modalUser" tabindex="-1">
-    <div class="modal-dialog"><div class="modal-content">
-      <div class="modal-header bg-primary text-white"><h5 class="modal-title" id="titleUser">Tambah Guru</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body">
-        <input type="hidden" id="uId">
-        <div class="mb-2"><label class="form-label">Nama Lengkap & Gelar</label><input type="text" class="form-control" id="uNama" required></div>
-        <div class="mb-2"><label class="form-label">Email</label><input type="email" class="form-control" id="uEmail" required></div>
-        <div class="mb-2"><label class="form-label">Role (pisahkan dengan koma)</label><input type="text" class="form-control" id="uRole" placeholder="guru,wali_kelas,piket"></div>
-        <div class="mb-2"><label class="form-label">PIN (Kosongkan jika tidak diubah)</label><input type="text" class="form-control" id="uPin" placeholder="6 digit/karakter"></div>
-        <div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="uAktif"><label class="form-check-label" for="uAktif">Akun Aktif</label></div>
+<div id="tpl-admin" style="display:none">
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="fw-bold m-0">⚙️ Manajemen Data Master</h4>
+      <button class="btn btn-outline-secondary btn-sm" onclick="navigateTo('dashboard')">Kembali</button>
+    </div>
+    <ul class="nav nav-tabs mb-3" id="adminTabs" role="tablist">
+      <li class="nav-item" role="presentation"><button type="button" class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tab-guru">Data Guru</button></li>
+      <li class="nav-item" role="presentation"><button type="button" class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-kelas">Data Kelas</button></li>
+      <li class="nav-item" role="presentation"><button type="button" class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-mapel">Data Mapel</button></li>
+    </ul>
+    <div class="tab-content card shadow-sm border-0 p-3" id="adminTabsContent">
+      <div class="tab-pane fade show active" id="tab-guru">
+        <button type="button" class="btn btn-success btn-sm mb-3 fw-bold" onclick="openUserModal()">+ Tambah Guru</button>
+        <div class="table-responsive"><table class="table table-hover align-middle">
+          <thead class="table-light"><tr><th>Nama Guru</th><th>Email</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="tbody-guru"></tbody>
+        </table></div>
       </div>
-      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="button" class="btn btn-primary" onclick="saveUser()">Simpan</button></div>
-    </div></div>
-  </div>
-
-  <!-- Modal Kelas -->
-  <div class="modal fade" id="modalKelas" tabindex="-1">
-    <div class="modal-dialog"><div class="modal-content">
-      <div class="modal-header bg-primary text-white"><h5 class="modal-title" id="titleKelas">Tambah Kelas</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body">
-        <input type="hidden" id="kId">
-        <div class="mb-2"><label class="form-label">Nama Kelas</label><input type="text" class="form-control" id="kNama" required></div>
-        <div class="mb-2"><label class="form-label">Tingkat (X/XI/XII)</label><input type="text" class="form-control" id="kTingkat" required></div>
-        <div class="mb-2"><label class="form-label">Konsentrasi Keahlian</label><input type="text" class="form-control" id="kKonsentrasi"></div>
-        <div class="mb-2"><label class="form-label">Jumlah Siswa</label><input type="number" class="form-control" id="kJumlah" value="36" required></div>
-        <div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="kAktif"><label class="form-check-label" for="kAktif">Kelas Aktif</label></div>
+      <div class="tab-pane fade" id="tab-kelas">
+        <button type="button" class="btn btn-success btn-sm mb-3 fw-bold" onclick="openClassModal()">+ Tambah Kelas</button>
+        <div class="table-responsive"><table class="table table-hover align-middle">
+          <thead class="table-light"><tr><th>Nama Kelas</th><th>Tingkat</th><th>Konsentrasi</th><th>Jml Siswa</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="tbody-kelas"></tbody>
+        </table></div>
       </div>
-      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="button" class="btn btn-primary" onclick="saveClass()">Simpan</button></div>
-    </div></div>
-  </div>
-
-  <!-- Modal Mapel -->
-  <div class="modal fade" id="modalMapel" tabindex="-1">
-    <div class="modal-dialog"><div class="modal-content">
-      <div class="modal-header bg-primary text-white"><h5 class="modal-title" id="titleMapel">Tambah Mapel</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body">
-        <input type="hidden" id="mId">
-        <div class="mb-2"><label class="form-label">Nama Mata Pelajaran</label><input type="text" class="form-control" id="mNama" required></div>
-        <div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="mAktif"><label class="form-check-label" for="mAktif">Mapel Aktif</label></div>
+      <div class="tab-pane fade" id="tab-mapel">
+        <button type="button" class="btn btn-success btn-sm mb-3 fw-bold" onclick="openSubjectModal()">+ Tambah Mapel</button>
+        <div class="table-responsive"><table class="table table-hover align-middle">
+          <thead class="table-light"><tr><th>Nama Mata Pelajaran</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="tbody-mapel"></tbody>
+        </table></div>
       </div>
-      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="button" class="btn btn-primary" onclick="saveSubject()">Simpan</button></div>
-    </div></div>
+    </div>
   </div>
+</div>
 
-  <script>
-    var publicConfig = <?= JSON.stringify(publicConfig || {}) ?>;
-    var kelasFromUrl = "<?= typeof kelasFromUrl !== 'undefined' ? kelasFromUrl : '' ?>";
-  </script>
-  
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <?!= include('Scripts') ?>
+<div id="tpl-laporan" style="display:none">
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+      <h4 class="fw-bold m-0">📊 Laporan Jurnal</h4>
+      <div>
+        <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="navigateTo('dashboard')">Kembali</button>
+        <button type="button" class="btn btn-success fw-bold btn-sm" onclick="window.print()">🖨️ Cetak</button>
+      </div>
+    </div>
+    <div class="card shadow-sm border-0 mb-4 d-print-none">
+      <div class="card-body">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-3"><label class="form-label">Dari Tanggal</label><input type="date" class="form-control" id="repTglMulai"></div>
+          <div class="col-md-3"><label class="form-label">Sampai Tanggal</label><input type="date" class="form-control" id="repTglSelesai"></div>
+          <div class="col-md-3"><label class="form-label">Kelas</label><select class="form-select" id="repKelas"><option value="">Semua Kelas</option></select></div>
+          <div class="col-md-3"><button type="button" class="btn btn-primary w-100 fw-bold" onclick="loadReports()">Tampilkan</button></div>
+        </div>
+      </div>
+    </div>
+    <div id="print-area" class="bg-white p-4 shadow-sm border-0">
+      <div class="text-center mb-4">
+        <h3 class="fw-bold m-0">SMK MUHAMMADIYAH 1 SURAKARTA</h3>
+        <p class="m-0">Laporan Jurnal Harian Guru</p><hr>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-bordered table-sm" style="font-size:12px">
+          <thead class="table-light text-center">
+            <tr><th style="width:30px">No</th><th style="width:80px">Tanggal</th><th style="width:70px">Kelas</th><th style="width:80px">Jam</th><th>Mapel</th><th>Guru Pengisi</th><th>Topik</th><th style="width:40px">Hadir</th><th style="width:25px">S</th><th style="width:25px">I</th><th style="width:25px">A</th><th>Keterangan</th></tr>
+          </thead>
+          <tbody id="tbody-reports"><tr><td colspan="12" class="text-center text-muted">Belum ada data.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="mt-5 d-flex justify-content-between">
+        <div>Mengetahui,<br>Kepala Sekolah<br><br><br><br><u>Joko Harinto, S.Pd., M.Pd.</u></div>
+        <div>Surakarta, <span id="tglCetak"></span><br>Petugas Kurikulum<br><br><br><br><u>........................................</u></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODALS ================= -->
+<div class="modal fade" id="modalUser" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-primary text-white"><h5 class="modal-title" id="titleUser">Tambah Guru</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="uId">
+      <div class="mb-2"><label class="form-label">Nama Lengkap & Gelar</label><input type="text" class="form-control" id="uNama" required></div>
+      <div class="mb-2"><label class="form-label">Email</label><input type="email" class="form-control" id="uEmail" required></div>
+      <div class="mb-2"><label class="form-label">Role (pisahkan koma)</label><input type="text" class="form-control" id="uRole" placeholder="guru,wali_kelas,piket"></div>
+      <div class="mb-2"><label class="form-label">PIN (kosongkan jika tidak diubah)</label><input type="text" class="form-control" id="uPin" placeholder="6 digit/karakter"></div>
+      <div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="uAktif"><label class="form-check-label" for="uAktif">Akun Aktif</label></div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="button" class="btn btn-primary" onclick="saveUser()">Simpan</button></div>
+  </div></div>
+</div>
+
+<div class="modal fade" id="modalKelas" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-primary text-white"><h5 class="modal-title" id="titleKelas">Tambah Kelas</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="kId">
+      <div class="mb-2"><label class="form-label">Nama Kelas</label><input type="text" class="form-control" id="kNama" required></div>
+      <div class="mb-2"><label class="form-label">Tingkat (X/XI/XII)</label><input type="text" class="form-control" id="kTingkat" required></div>
+      <div class="mb-2"><label class="form-label">Konsentrasi Keahlian</label><input type="text" class="form-control" id="kKonsentrasi"></div>
+      <div class="mb-2"><label class="form-label">Jumlah Siswa</label><input type="number" class="form-control" id="kJumlah" value="36" required></div>
+      <div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="kAktif"><label class="form-check-label" for="kAktif">Kelas Aktif</label></div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="button" class="btn btn-primary" onclick="saveClass()">Simpan</button></div>
+  </div></div>
+</div>
+
+<div class="modal fade" id="modalMapel" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-primary text-white"><h5 class="modal-title" id="titleMapel">Tambah Mapel</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="mId">
+      <div class="mb-2"><label class="form-label">Nama Mata Pelajaran</label><input type="text" class="form-control" id="mNama" required></div>
+      <div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="mAktif"><label class="form-check-label" for="mAktif">Mapel Aktif</label></div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="button" class="btn btn-primary" onclick="saveSubject()">Simpan</button></div>
+  </div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ⚠️ GANTI dengan URL /exec GAS Anda (yang aktif)
+  const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyR93WUooPuW468-Rto5AMne17uvXw5XjzECPB5J1_4xrOjHTAVMr5AfFLSExnEX3F8/exec';
+
+  var TOKEN_KEY = 'jhg_token';
+  var $ = function (id) { return document.getElementById(id); };
+  var urlParams = new URLSearchParams(window.location.search);
+  var urlKelas = (urlParams.get('kelas') || '').toUpperCase();
+  var state = { token: null, user: null, config: {}, masterData: null, adminData: null, targetKelas: urlKelas };
+
+  // ============= API CALL =============
+  async function callApi(action, token, data) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const response = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: action, token: token || null, data: data || {} }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      const result = await response.json();
+      if (result.ok === false && (String(result.error || '').includes('Sesi tidak valid') || String(result.code || '') === 'AUTH_REQUIRED')) {
+        localStorage.removeItem(TOKEN_KEY);
+        state.token = null; state.user = null;
+        show('view-login');
+        throw new Error('Sesi berakhir, silakan login ulang.');
+      }
+      if (result.ok === false) throw new Error(result.error || 'Gagal.');
+      return result.data;
+    } catch (error) {
+      if (error.name === 'AbortError') throw new Error('Koneksi ke server Google terlalu lama (Timeout).');
+      throw new Error(error.message || 'Kesalahan jaringan.');
+    }
+  }
+
+  // ============= ROUTING =============
+  window.navigateTo = function (page) {
+    var tpl = document.getElementById('tpl-' + page) || document.getElementById('tpl-dashboard');
+    var mc = $('main-content');
+    if (!mc) { mc = document.getElementById('main-content'); }
+    if (!mc) return;
+    mc.innerHTML = tpl.innerHTML;
+
+    if (page === 'dashboard' && state.user) {
+      var h4 = document.querySelector('#main-content h4');
+      var h2 = document.getElementById('dashNamaGuru');
+      var pRole = document.getElementById('dashRole');
+      if (h4) {
+        var bannerTitle = 'Selamat Datang,';
+        if (state.targetKelas) {
+          var match = state.masterData ? state.masterData.classes.find(c => c.class_id === state.targetKelas) : null;
+          var namaKelas = match ? match.nama_kelas : state.targetKelas;
+          bannerTitle = 'Selamat Datang di Kelas ' + namaKelas;
+        }
+        h4.textContent = bannerTitle;
+      }
+      if (h2) h2.textContent = state.user.nama_guru;
+      if (pRole) pRole.textContent = 'Peran: ' + (state.user.roles || []).join(', ').toUpperCase();
+
+      var btnLogout = document.getElementById('btn-logout');
+      if (btnLogout) {
+        btnLogout.onclick = function () {
+          if (!confirm('Keluar dari aplikasi?')) return;
+          var t = state.token; state.token = null; state.user = null;
+          localStorage.removeItem(TOKEN_KEY);
+          if ($('menu-laporan')) $('menu-laporan').classList.add('d-none');
+          if ($('menu-admin')) $('menu-admin').classList.add('d-none');
+          show('view-login');
+          if (t) callApi('api_logout', t).catch(function () {});
+        };
+      }
+
+      var hasWali = (state.user.roles || []).indexOf('wali_kelas') !== -1;
+      var hasAdmin = (state.user.roles || []).indexOf('admin') !== -1;
+      var hasKuri = (state.user.roles || []).indexOf('kurikulum') !== -1;
+      var btnSidebar = document.getElementById('btn-sidebar');
+      var cardLaporan = document.getElementById('dash-card-laporan');
+      if (hasWali || hasAdmin || hasKuri) {
+        if (btnSidebar) btnSidebar.classList.remove('d-none');
+        if ($('menu-laporan')) $('menu-laporan').classList.remove('d-none');
+        if (cardLaporan) cardLaporan.classList.remove('d-none');
+        if (hasAdmin && $('menu-admin')) $('menu-admin').classList.remove('d-none');
+      } else {
+        if (btnSidebar) btnSidebar.classList.add('d-none');
+        if ($('menu-laporan')) $('menu-laporan').classList.add('d-none');
+        if (cardLaporan) cardLaporan.classList.add('d-none');
+        if ($('menu-admin')) $('menu-admin').classList.add('d-none');
+      }
+    }
+
+    if (page === 'form-jurnal') setTimeout(initFormJurnal, 80);
+    if (page === 'admin')       setTimeout(initAdminPanel, 80);
+    if (page === 'laporan')     setTimeout(initReports, 80);
+    if (page === 'riwayat')     setTimeout(initRiwayat, 80);
+  };
+
+  window.closeSidebar = function () {
+    var el = document.getElementById('sidebarMenu');
+    if (el) {
+      var inst = bootstrap.Offcanvas.getInstance(el);
+      if (inst) inst.hide();
+    }
+  };
+
+  function show(view) {
+    ['view-loading', 'view-login', 'view-dashboard'].forEach(function (id) {
+      var el = $(id); if (el) el.classList.toggle('active', id === view);
+    });
+    if (view === 'view-login') {
+      if ($('btn-login')) { $('btn-login').disabled = false; $('btn-login').textContent = 'Masuk Aplikasi'; }
+      if ($('login-message')) $('login-message').innerHTML = '';
+      if ($('pin')) $('pin').value = '';
+    }
+  }
+
+  function renderDashboard(user) {
+    show('view-dashboard');
+    if (state.targetKelas) navigateTo('form-jurnal');
+    else navigateTo('dashboard');
+  }
+
+  // ============= LOGIN =============
+  document.addEventListener('submit', function (e) {
+    if (e.target && e.target.id === 'form-login') {
+      e.preventDefault();
+      var email = $('emailGuru').value.trim();
+      var pin = $('pin').value.trim();
+      if (!email || !pin) return;
+      $('btn-login').disabled = true; $('btn-login').textContent = 'Memproses...';
+      callApi('api_login', null, { emailGuru: email, pin: pin }).then(function (data) {
+        state.token = data.token; state.user = data.user;
+        localStorage.setItem(TOKEN_KEY, data.token);
+        $('pin').value = '';
+        renderDashboard(data.user);
+      }).catch(function (err) {
+        $('login-message').innerHTML = '<span class="text-danger">' + err.message + '</span>';
+        $('btn-login').disabled = false; $('btn-login').textContent = 'Masuk Aplikasi';
+      });
+    }
+  });
+
+  // ============= FORM JURNAL =============
+  function initFormJurnal() {
+    var today = new Date();
+    if ($('jTanggal')) $('jTanggal').value = today.toISOString().split('T')[0];
+    if ($('jNamaPengisi')) $('jNamaPengisi').value = state.user.nama_guru;
+
+    var isPiket = (state.user.roles || []).indexOf('piket') !== -1 || (state.user.roles || []).indexOf('admin') !== -1;
+    if (isPiket && $('optPengganti')) $('optPengganti').style.display = 'block';
+    else if ($('optPengganti')) $('optPengganti').style.display = 'none';
+
+    if (!state.targetKelas) {
+      alert('⚠️ Anda tidak membuka aplikasi dari QR Code kelas.\n\nSilakan scan QR Code di pintu kelas untuk mengisi jurnal.');
+      navigateTo('dashboard');
+      return;
+    }
+
+    if ($('jMapel')) $('jMapel').innerHTML = '<option value="">Memuat data…</option>';
+
+    callApi('api_getFormMasterData', state.token).then(function (data) {
+      state.masterData = data;
+      var kelas = data.classes.find(c => String(c.class_id).trim() === String(state.targetKelas).trim());
+      if (kelas) {
+        if ($('jNamaKelas')) $('jNamaKelas').value = kelas.nama_kelas;
+        if ($('jKelas')) $('jKelas').value = kelas.class_id;
+        if ($('jSiswa')) $('jSiswa').value = kelas.jumlah_siswa || 36;
+        if (typeof window.hitungHadir === 'function') window.hitungHadir();
+      } else if ($('jNamaKelas')) {
+        $('jNamaKelas').value = 'Kelas tidak ditemukan: ' + state.targetKelas;
+      }
+
+      var selMapel = $('jMapel');
+      if (selMapel) {
+        selMapel.innerHTML = '<option value="">-- Pilih Mapel --</option>';
+        if (data.subjects && data.subjects.length > 0) {
+          data.subjects.forEach(s => { selMapel.innerHTML += '<option value="' + s.subject_id + '">' + s.nama_mata_pelajaran + '</option>'; });
+        } else {
+          selMapel.innerHTML = '<option value="">(Data Mapel kosong)</option>';
+        }
+      }
+      var selGuru = $('jGuruUtama');
+      if (selGuru) {
+        selGuru.innerHTML = '<option value="">-- Pilih Guru --</option>';
+        (data.teachers || []).forEach(t => {
+          if (t.user_id !== state.user.user_id) selGuru.innerHTML += '<option value="' + t.user_id + '">' + t.nama_guru + '</option>';
+        });
+      }
+    }).catch(function (err) {
+      console.error(err);
+      alert('Gagal memuat data dari server: ' + err.message);
+    });
+  }
+
+  window.toggleGuruPengganti = function () {
+    if ($('boxGuruPengganti') && $('jStatusGuru')) {
+      $('boxGuruPengganti').classList.toggle('d-none', $('jStatusGuru').value !== 'pengganti');
+    }
+  };
+
+  window.hitungHadir = function () {
+    if (!$('jSiswa')) return;
+    var total = parseInt($('jSiswa').value) || 0;
+    var s = parseInt($('jSakit').value) || 0;
+    var i = parseInt($('jIzin').value) || 0;
+    var a = parseInt($('jAlpa').value) || 0;
+    var h = total - (s + i + a);
+    $('jHadir').value = h < 0 ? 0 : h;
+  };
+
+  document.addEventListener('submit', function (e) {
+    if (e.target && e.target.id === 'formJurnal') {
+      e.preventDefault();
+      var btn = $('btnSimpan');
+      btn.disabled = true; btn.textContent = 'Menyimpan...';
+      var payload = {
+        tanggal: $('jTanggal').value,
+        status_guru: $('jStatusGuru').value,
+        guru_utama_id: $('jGuruUtama').value,
+        class_id: $('jKelas').value,
+        subject_id: $('jMapel').value,
+        jam_mulai: $('jJamMulai').value,
+        jam_selesai: $('jJamSelesai').value,
+        topik: $('jTopik').value,
+        jumlah_siswa: $('jSiswa').value,
+        jumlah_sakit: $('jSakit').value,
+        jumlah_izin: $('jIzin').value,
+        jumlah_alpa: $('jAlpa').value,
+        kejadian: $('jKejadian').value
+      };
+      callApi('api_saveJournal', state.token, payload).then(function (res) {
+        alert('✅ ' + res.message);
+        if (state.targetKelas) {
+          initFormJurnal();
+          btn.disabled = false; btn.textContent = 'Simpan Jurnal';
+        } else {
+          navigateTo('dashboard');
+        }
+      }).catch(function (err) {
+        alert('❌ ' + err.message);
+        btn.disabled = false; btn.textContent = 'Simpan Jurnal';
+      });
+    }
+  });
+
+  // ============= ADMIN PANEL =============
+  function initAdminPanel() {
+    if (!$('tbody-guru')) return;
+    callApi('api_getAdminData', state.token).then(function (data) {
+      state.adminData = data;
+
+      var tbGuru = $('tbody-guru');
+      tbGuru.innerHTML = '';
+      if (!data.users || data.users.length === 0) {
+        tbGuru.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Data Guru Kosong.</td></tr>';
+      } else {
+        data.users.forEach(function (u) {
+          var isAktif = String(u.status_aktif).toLowerCase() === 'true';
+          tbGuru.innerHTML += '<tr>' +
+            '<td>' + (u.nama_guru || '') + '</td>' +
+            '<td>' + (u.email || '') + '</td>' +
+            '<td><span class="badge bg-secondary">' + (u.role || '') + '</span></td>' +
+            '<td>' + (isAktif ? '<span class="text-success">Aktif</span>' : '<span class="text-danger">Nonaktif</span>') + '</td>' +
+            '<td><button type="button" class="btn btn-sm btn-primary" onclick="openUserModal(\'' + u.user_id + '\')">Edit</button></td>' +
+          '</tr>';
+        });
+      }
+
+      var tbKelas = $('tbody-kelas');
+      tbKelas.innerHTML = '';
+      (data.classes || []).forEach(function (c) {
+        var isAktif = String(c.status_aktif).toLowerCase() === 'true';
+        tbKelas.innerHTML += '<tr>' +
+          '<td>' + (c.nama_kelas || '') + '</td>' +
+          '<td>' + (c.tingkat || '') + '</td>' +
+          '<td>' + (c.konsentrasi_keahlian || '') + '</td>' +
+          '<td>' + (c.jumlah_siswa || 0) + '</td>' +
+          '<td>' + (isAktif ? 'Aktif' : 'Nonaktif') + '</td>' +
+          '<td><button type="button" class="btn btn-sm btn-primary" onclick="openClassModal(\'' + c.class_id + '\')">Edit</button></td>' +
+        '</tr>';
+      });
+
+      var tbMapel = $('tbody-mapel');
+      tbMapel.innerHTML = '';
+      (data.subjects || []).forEach(function (s) {
+        var isAktif = String(s.status_aktif).toLowerCase() === 'true';
+        tbMapel.innerHTML += '<tr>' +
+          '<td>' + (s.nama_mata_pelajaran || '') + '</td>' +
+          '<td>' + (isAktif ? 'Aktif' : 'Nonaktif') + '</td>' +
+          '<td><button type="button" class="btn btn-sm btn-primary" onclick="openSubjectModal(\'' + s.subject_id + '\')">Edit</button></td>' +
+        '</tr>';
+      });
+    }).catch(function (err) { alert('Error Admin: ' + err.message); });
+  }
+
+  // ============= MODAL GURU =============
+  window.openUserModal = function (id) {
+    var isEdit = !!id;
+    $('titleUser').textContent = isEdit ? 'Edit Data Guru' : 'Tambah Guru Baru';
+    $('uId').value = id || '';
+    $('uPin').value = '';
+    if (isEdit && state.adminData) {
+      var user = state.adminData.users.find(function (x) { return x.user_id === id; });
+      if (user) {
+        $('uNama').value = user.nama_guru || '';
+        $('uEmail').value = user.email || '';
+        $('uRole').value = user.role || '';
+        $('uAktif').checked = String(user.status_aktif).toLowerCase() === 'true';
+      }
+    } else {
+      $('uNama').value = ''; $('uEmail').value = ''; $('uRole').value = ''; $('uAktif').checked = true;
+    }
+    new bootstrap.Modal(document.getElementById('modalUser')).show();
+  };
+
+  window.saveUser = function () {
+    var data = {
+      user_id: $('uId').value,
+      nama_guru: $('uNama').value,
+      email: $('uEmail').value,
+      role: $('uRole').value,
+      pin: $('uPin').value,
+      status_aktif: $('uAktif').checked
+    };
+    if (!data.nama_guru || !data.email) return alert('Nama dan Email wajib diisi!');
+    callApi('api_saveUser', state.token, data).then(function (res) {
+      alert('✅ ' + res.message);
+      bootstrap.Modal.getInstance(document.getElementById('modalUser')).hide();
+      initAdminPanel();
+    }).catch(function (err) { alert('❌ ' + err.message); });
+  };
+
+  // ============= MODAL KELAS =============
+  window.openClassModal = function (id) {
+    var isEdit = !!id;
+    $('titleKelas').textContent = isEdit ? 'Edit Data Kelas' : 'Tambah Kelas Baru';
+    $('kId').value = id || '';
+    if (isEdit && state.adminData) {
+      var c = state.adminData.classes.find(function (x) { return x.class_id === id; });
+      if (c) {
+        $('kNama').value = c.nama_kelas || '';
+        $('kTingkat').value = c.tingkat || '';
+        $('kKonsentrasi').value = c.konsentrasi_keahlian || '';
+        $('kJumlah').value = c.jumlah_siswa || 36;
+        $('kAktif').checked = String(c.status_aktif).toLowerCase() === 'true';
+      }
+    } else {
+      $('kNama').value = ''; $('kTingkat').value = ''; $('kKonsentrasi').value = ''; $('kJumlah').value = 36; $('kAktif').checked = true;
+    }
+    new bootstrap.Modal(document.getElementById('modalKelas')).show();
+  };
+
+  window.saveClass = function () {
+    var data = {
+      class_id: $('kId').value,
+      nama_kelas: $('kNama').value,
+      tingkat: $('kTingkat').value,
+      konsentrasi_keahlian: $('kKonsentrasi').value,
+      jumlah_siswa: $('kJumlah').value,
+      status_aktif: $('kAktif').checked
+    };
+    if (!data.nama_kelas || !data.tingkat) return alert('Nama dan Tingkat wajib diisi!');
+    callApi('api_saveClass', state.token, data).then(function (res) {
+      alert('✅ ' + res.message);
+      bootstrap.Modal.getInstance(document.getElementById('modalKelas')).hide();
+      initAdminPanel();
+    }).catch(function (err) { alert('❌ ' + err.message); });
+  };
+
+  // ============= MODAL MAPEL =============
+  window.openSubjectModal = function (id) {
+    var isEdit = !!id;
+    $('titleMapel').textContent = isEdit ? 'Edit Data Mapel' : 'Tambah Mapel Baru';
+    $('mId').value = id || '';
+    if (isEdit && state.adminData) {
+      var s = state.adminData.subjects.find(function (x) { return x.subject_id === id; });
+      if (s) {
+        $('mNama').value = s.nama_mata_pelajaran || '';
+        $('mAktif').checked = String(s.status_aktif).toLowerCase() === 'true';
+      }
+    } else {
+      $('mNama').value = ''; $('mAktif').checked = true;
+    }
+    new bootstrap.Modal(document.getElementById('modalMapel')).show();
+  };
+
+  window.saveSubject = function () {
+    var data = {
+      subject_id: $('mId').value,
+      nama_mata_pelajaran: $('mNama').value,
+      status_aktif: $('mAktif').checked
+    };
+    if (!data.nama_mata_pelajaran) return alert('Nama Mapel wajib diisi!');
+    callApi('api_saveSubject', state.token, data).then(function (res) {
+      alert('✅ ' + res.message);
+      bootstrap.Modal.getInstance(document.getElementById('modalMapel')).hide();
+      initAdminPanel();
+    }).catch(function (err) { alert('❌ ' + err.message); });
+  };
+
+  // ============= LAPORAN =============
+  function initReports() {
+    if (!$('repTglMulai')) return;
+    var today = new Date();
+    var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    $('repTglMulai').value = firstDay.toISOString().split('T')[0];
+    $('repTglSelesai').value = today.toISOString().split('T')[0];
+    if ($('tglCetak')) $('tglCetak').textContent = today.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    callApi('api_getFormMasterData', state.token).then(function (data) {
+      var sel = $('repKelas');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Semua Kelas</option>';
+      if (data && data.classes && data.classes.length > 0) {
+        data.classes.forEach(function (c) { sel.innerHTML += '<option value="' + c.class_id + '">' + c.nama_kelas + '</option>'; });
+      }
+    }).catch(function (err) { console.error('Load filter kelas:', err); });
+  }
+
+  window.loadReports = function () {
+    var filter = {
+      tgl_mulai: $('repTglMulai').value,
+      tgl_selesai: $('repTglSelesai').value,
+      class_id: $('repKelas').value
+    };
+    var tb = $('tbody-reports');
+    if (!tb) return;
+    tb.innerHTML = '<tr><td colspan="12" class="text-center">Memuat data…</td></tr>';
+    callApi('api_getReports', state.token, filter).then(function (res) {
+      tb.innerHTML = '';
+      if (!res.data || res.data.length === 0) {
+        tb.innerHTML = '<tr><td colspan="12" class="text-center">Tidak ada data pada periode ini.</td></tr>';
+        return;
+      }
+      res.data.forEach(function (j, idx) {
+        var guruTxt = j.guru;
+        if (j.guru_utama) guruTxt += ' <br><small class="text-danger">(Pengganti dari ' + j.guru_utama + ')</small>';
+        var ket = (j.kejadian && j.kejadian !== '-') ? j.kejadian : '';
+        tb.innerHTML += '<tr>' +
+          '<td class="text-center">' + (idx + 1) + '</td>' +
+          '<td class="text-center">' + j.tanggal + '</td>' +
+          '<td class="text-center">' + j.nama_kelas + '</td>' +
+          '<td class="text-center">' + j.jam + '</td>' +
+          '<td>' + j.mapel + '</td>' +
+          '<td>' + guruTxt + '</td>' +
+          '<td>' + j.topik + '</td>' +
+          '<td class="text-center">' + j.hadir + '</td>' +
+          '<td class="text-center">' + j.sakit + '</td>' +
+          '<td class="text-center">' + j.izin + '</td>' +
+          '<td class="text-center">' + j.alpa + '</td>' +
+          '<td>' + ket + '</td>' +
+        '</tr>';
+      });
+    }).catch(function (err) { alert('Error Laporan: ' + err.message); });
+  };
+
+  // ============= RIWAYAT =============
+  function initRiwayat() {
+    var tb = $('tbody-riwayat');
+    if (!tb) return;
+    callApi('api_getMyJournals', state.token).then(function (res) {
+      tb.innerHTML = '';
+      if (!res.data || res.data.length === 0) {
+        tb.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Belum ada jurnal yang pernah Anda isi.</td></tr>';
+        return;
+      }
+      res.data.forEach(function (j) {
+        var badge = j.status === 'pengganti'
+          ? '<span class="badge bg-warning text-dark">Pengganti (dari ' + (j.guru_utama || '-') + ')</span>'
+          : '<span class="badge bg-success">Guru Utama</span>';
+        tb.innerHTML += '<tr>' +
+          '<td>' + j.tanggal + '</td>' +
+          '<td class="fw-bold">' + j.nama_kelas + '</td>' +
+          '<td>' + j.jam + '</td>' +
+          '<td>' + j.mapel + '</td>' +
+          '<td>' + j.topik + '</td>' +
+          '<td class="text-center"><span class="text-success">' + j.hadir + '</span> / <span class="text-warning">' + j.sakit + '</span> / <span class="text-info">' + j.izin + '</span> / <span class="text-danger">' + j.alpa + '</span></td>' +
+          '<td>' + badge + '</td>' +
+        '</tr>';
+      });
+    }).catch(function (err) {
+      tb.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Gagal memuat riwayat: ' + err.message + '</td></tr>';
+    });
+  }
+
+  // ============= BOOT =============
+  function boot() {
+    var urlToken = urlParams.get('token');
+    if (urlToken) {
+      localStorage.setItem(TOKEN_KEY, urlToken);
+      state.token = urlToken;
+      var cleanUrl = window.location.pathname + (state.targetKelas ? '?kelas=' + state.targetKelas : '');
+      window.history.replaceState({}, document.title, cleanUrl);
+    } else {
+      state.token = localStorage.getItem(TOKEN_KEY);
+    }
+
+    if ($('schoolName')) $('schoolName').textContent = 'SMK Muhammadiyah 1 Surakarta';
+
+    if (!state.token) {
+      show('view-login');
+      if (state.targetKelas && $('warning-box')) {
+        $('warning-box').classList.remove('d-none');
+        $('warning-text').innerHTML = '🔒 Area terbatas. Login dengan email terdaftar untuk mengisi jurnal kelas <b>' + state.targetKelas + '</b>.';
+      }
+      return;
+    }
+
+    callApi('api_getCurrentUser', state.token).then(function (data) {
+      state.user = data.user;
+      state.config = data.config || state.config;
+      renderDashboard(data.user);
+    }).catch(function () {
+      localStorage.removeItem(TOKEN_KEY);
+      state.token = null;
+      show('view-login');
+      if (state.targetKelas && $('warning-box')) {
+        $('warning-box').classList.remove('d-none');
+        $('warning-text').innerHTML = '🔒 Area terbatas. Login dengan email terdaftar untuk mengisi jurnal kelas <b>' + state.targetKelas + '</b>.';
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', boot);
+})();
+</script>
 </body>
 </html>
